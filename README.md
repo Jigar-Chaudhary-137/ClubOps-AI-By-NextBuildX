@@ -15,8 +15,6 @@
 
 [📸 Screenshots](#-screenshots) · [⚡ Quick Start](#-quick-start) · [🏗 Architecture](#-architecture) · [🤖 AI Features](#-ai--rag-features) · [📡 API Reference](#-api-reference) · [🔑 Demo Credentials](#-demo-credentials)
 
----
-
 
 </div>
 
