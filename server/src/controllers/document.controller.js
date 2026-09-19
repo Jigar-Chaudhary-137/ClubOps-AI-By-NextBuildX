@@ -2,6 +2,26 @@ const documentService = require('../services/document.service');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/errors');
 
+const uploadDocument = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const document = await documentService.uploadDocument(clubId, req.user._id, req.file, req.body);
+    return successResponse(res, {
+      status: 201,
+      message: 'Document uploaded and processed successfully',
+      data: { document }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
 const createDocument = async (req, res, next) => {
   try {
     if (!req.user.club) {
@@ -104,6 +124,7 @@ const deleteDocument = async (req, res, next) => {
 };
 
 module.exports = {
+  uploadDocument,
   createDocument,
   getDocuments,
   getDocumentById,
