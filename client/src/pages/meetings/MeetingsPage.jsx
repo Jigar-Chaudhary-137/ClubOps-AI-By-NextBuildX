@@ -1,114 +1,187 @@
-import React from 'react';
-import { Video, Sparkles, FileText, Upload, Plus } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Sparkles, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
-import Textarea from '../../components/ui/Textarea';
+import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import {
+  MeetingList,
+  CreateMeetingModal
+} from '../../components/meetings';
+
+const meetingTypeFilterOptions = [
+  { value: 'all', label: 'All Types' },
+  { value: 'Planning', label: 'Planning' },
+  { value: 'Review', label: 'Review' },
+  { value: 'Team Meeting', label: 'Team Meeting' },
+  { value: 'Committee', label: 'Committee' },
+  { value: 'Emergency', label: 'Emergency' },
+  { value: 'Other', label: 'Other' }
+];
+
+const eventFilterOptions = [
+  { value: 'all', label: 'All Events' }
+];
+
+const processingStatusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'Not Processed', label: 'Not Processed' },
+  { value: 'Processing', label: 'Processing' },
+  { value: 'Processed', label: 'Processed' }
+];
+
+const sortOptions = [
+  { value: 'updated', label: 'Recently Updated' },
+  { value: 'date', label: 'Meeting Date' },
+  { value: 'name', label: 'Name' }
+];
 
 export default function MeetingsPage() {
+  const navigate = useNavigate();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+
+  // Toolbar filters state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('updated');
+
+  // Since backend is not connected yet, meeting list starts empty
+  const meetings = [];
+
+  const handleOpenIntelligence = () => {
+    // Navigate to new session meeting intelligence workspace
+    navigate('/meetings/intelligence');
+  };
+
+  const handleViewMeeting = (id) => {
+    navigate(`/meetings/${id}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#263247]/60">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Meeting Intelligence & Transcripts
-            </h1>
-            <Badge variant="primary">Action Extractor</Badge>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1">
+            Meetings
+          </h1>
           <p className="text-xs sm:text-sm text-[#94A3B8]">
-            Ingest meeting notes, extract action items, and detect owners automatically
+            Capture decisions, action items, and important context from every club meeting.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Header Actions */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            variant="ai"
+            size="sm"
+            onClick={handleOpenIntelligence}
+            leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+          >
+            Meeting Intelligence
+          </Button>
+
           <Button
             variant="primary"
             size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
             leftIcon={<Plus className="w-4 h-4" />}
-            disabled
           >
-            Log New Meeting
+            New Meeting
           </Button>
         </div>
       </div>
 
-      {/* Ingestion Box Architecture */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div>
-              <CardTitle>Transcript & Notes Ingestion</CardTitle>
-              <CardDescription>
-                Paste meeting minutes or discussion raw notes for AI processing
-              </CardDescription>
+      {/* Meeting Toolbar */}
+      <Card className="border-[#263247] bg-[#151D2E]">
+        <CardContent className="p-3.5 sm:p-4">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="flex-1 max-w-md">
+              <Input
+                placeholder="Search meetings..."
+                leftIcon={<Search className="w-4 h-4" />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <Badge variant="ai">AI Parser</Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              placeholder="Paste raw meeting notes or audio transcript here (e.g., 'Discussed sponsorship targets with Rahul, target $2000 by next Friday; Ananya will follow up on auditorium booking...')"
-              rows={6}
-              disabled
-            />
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <span className="text-xs text-[#94A3B8]">
-                AI will identify action items, owners, and deadlines on submit.
-              </span>
-              <Button
-                variant="ai"
-                size="md"
-                leftIcon={<Sparkles className="w-4 h-4" />}
-                disabled
-              >
-                Extract Action Items
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Processing Pipeline Preview */}
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Extraction Pipeline</CardTitle>
-              <CardDescription>Automated processing steps</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs text-[#94A3B8]">
-            <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#6366F1]/20 text-[#818CF8] flex items-center justify-center font-bold text-xs">1</span>
-              <span>Context & meeting intent analysis</span>
-            </div>
-            <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] flex items-center justify-center font-bold text-xs">2</span>
-              <span>Action item & owner resolution</span>
-            </div>
-            <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#22C55E]/20 text-[#4ADE80] flex items-center justify-center font-bold text-xs">3</span>
-              <span>Deadline parsing & task proposal</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Filters & Sort Controls */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="w-full sm:w-36">
+                <Select
+                  options={eventFilterOptions}
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                />
+              </div>
 
-      {/* Meeting History Container */}
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Meeting Records</CardTitle>
-            <CardDescription>Processed minutes and historical logs</CardDescription>
+              <div className="w-full sm:w-36">
+                <Select
+                  options={meetingTypeFilterOptions}
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                />
+              </div>
+
+              <div className="w-full sm:w-36">
+                <Select
+                  options={processingStatusOptions}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                />
+              </div>
+
+              <div className="w-full sm:w-40">
+                <Select
+                  options={sortOptions}
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                />
+              </div>
+
+              {/* View Toggle */}
+              <div className="hidden sm:flex items-center p-1 rounded-lg bg-[#111827] border border-[#263247]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  aria-label="Table view"
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-[#151D2E] text-white shadow-sm' : 'text-[#94A3B8] hover:text-white'}`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-[#151D2E] text-white shadow-sm' : 'text-[#94A3B8] hover:text-white'}`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={<Video className="w-7 h-7 text-[#818CF8]" />}
-            title="No meetings logged yet"
-            description="Log your first organizing committee meeting to see action items extracted and mapped to the task board."
-          />
         </CardContent>
       </Card>
+
+      {/* Meeting List or Empty State */}
+      <MeetingList
+        meetings={meetings}
+        viewMode={viewMode}
+        onViewMeeting={handleViewMeeting}
+        onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        onProcessNotes={handleOpenIntelligence}
+      />
+
+      {/* Create Meeting Modal */}
+      <CreateMeetingModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
