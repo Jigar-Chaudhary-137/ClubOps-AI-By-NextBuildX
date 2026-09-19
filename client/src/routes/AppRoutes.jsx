@@ -13,6 +13,7 @@ import EventDetailsPage from '../pages/events/EventDetailsPage';
 import TasksPage from '../pages/tasks/TasksPage';
 import TaskDetailsPage from '../pages/tasks/TaskDetailsPage';
 import VolunteersPage from '../pages/volunteers/VolunteersPage';
+import VolunteerDetailsPage from '../pages/volunteers/VolunteerDetailsPage';
 import MeetingsPage from '../pages/meetings/MeetingsPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
 import RisksPage from '../pages/risks/RisksPage';
@@ -39,6 +40,7 @@ export default function AppRoutes() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
         <Route path="/volunteers" element={<VolunteersPage />} />
+        <Route path="/volunteers/:volunteerId" element={<VolunteerDetailsPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/risks" element={<RisksPage />} />
