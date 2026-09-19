@@ -17,7 +17,6 @@
 
 ---
 
-![ClubOps AI Dashboard](docs/screenshots/dashboard.png)
 
 </div>
 
