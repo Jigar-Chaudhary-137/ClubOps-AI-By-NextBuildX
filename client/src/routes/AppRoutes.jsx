@@ -11,6 +11,7 @@ import DashboardPage from '../pages/dashboard/DashboardPage';
 import EventsPage from '../pages/events/EventsPage';
 import EventDetailsPage from '../pages/events/EventDetailsPage';
 import TasksPage from '../pages/tasks/TasksPage';
+import TaskDetailsPage from '../pages/tasks/TaskDetailsPage';
 import VolunteersPage from '../pages/volunteers/VolunteersPage';
 import MeetingsPage from '../pages/meetings/MeetingsPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
@@ -36,6 +37,7 @@ export default function AppRoutes() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
         <Route path="/volunteers" element={<VolunteersPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />

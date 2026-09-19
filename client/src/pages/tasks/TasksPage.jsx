@@ -1,108 +1,220 @@
 import React, { useState } from 'react';
-import { CheckSquare, Plus, Sparkles, Columns3, ListFilter, AlertCircle } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Plus,
+  Search,
+  Sparkles,
+  List,
+  Columns,
+  Filter,
+  CheckSquare
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
+import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import { Card, CardContent } from '../../components/ui/Card';
+import { AIBadge } from '../../components/ai';
+import {
+  TaskList,
+  TaskBoard,
+  CreateTaskModal,
+  TaskQuickActions
+} from '../../components/tasks';
 
-const columns = [
-  { id: 'todo', title: 'To Do', color: 'border-t-[#94A3B8]' },
-  { id: 'in_progress', title: 'In Progress', color: 'border-t-[#6366F1]' },
-  { id: 'review', title: 'Review / Blocked', color: 'border-t-[#F59E0B]' },
-  { id: 'done', title: 'Completed', color: 'border-t-[#22C55E]' }
+const statusFilterOptions = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'To Do', label: 'To Do' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Blocked', label: 'Blocked' }
+];
+
+const priorityFilterOptions = [
+  { value: 'all', label: 'All Priorities' },
+  { value: 'Low', label: 'Low Priority' },
+  { value: 'Medium', label: 'Medium Priority' },
+  { value: 'High', label: 'High Priority' },
+  { value: 'Urgent', label: 'Urgent' }
+];
+
+const assigneeFilterOptions = [
+  { value: 'all', label: 'All Assignees' },
+  { value: 'unassigned', label: 'Unassigned' }
+];
+
+const eventFilterOptions = [
+  { value: 'all', label: 'All Events' }
+];
+
+const sortOptions = [
+  { value: 'updated', label: 'Recently Updated' },
+  { value: 'dueDate', label: 'Due Date' },
+  { value: 'priority', label: 'Priority' },
+  { value: 'created', label: 'Created Date' }
 ];
 
 export default function TasksPage() {
-  const [viewMode, setViewMode] = useState('kanban');
+  const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'board'
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Filters state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('updated');
+
+  // Currently no backend data exists
+  const tasks = [];
+
+  const handleViewTask = (taskId) => {
+    navigate(`/tasks/${taskId}`);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#263247]/60">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Task Operations
+              Tasks
             </h1>
-            <Badge variant="primary">Work Breakdown</Badge>
+            <AIBadge size="sm">Work Breakdown</AIBadge>
           </div>
           <p className="text-xs sm:text-sm text-[#94A3B8]">
-            Assign tasks, track dependencies, and manage deadlines across team leads
+            Track responsibilities, deadlines, and work across your club events.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* View switcher */}
-          <div className="flex items-center bg-[#151D2E] p-1 rounded-lg border border-[#263247]">
-            <button
-              type="button"
-              onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-md text-xs font-medium transition-colors ${
-                viewMode === 'kanban'
-                  ? 'bg-[#1E293B] text-white shadow-sm'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-              aria-label="Kanban View"
-            >
-              <Columns3 className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md text-xs font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-[#1E293B] text-white shadow-sm'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-              aria-label="List View"
-            >
-              <ListFilter className="w-4 h-4" />
-            </button>
-          </div>
 
-          <Button
-            variant="ai"
-            size="sm"
-            leftIcon={<Sparkles className="w-3.5 h-3.5" />}
-            disabled
-          >
-            Extract from Notes
-          </Button>
+        <div className="flex items-center gap-2.5">
+          <Link to="/ai">
+            <Button
+              variant="ai"
+              size="sm"
+              leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+            >
+              Ask AI
+            </Button>
+          </Link>
           <Button
             variant="primary"
             size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
             leftIcon={<Plus className="w-4 h-4" />}
-            disabled
           >
-            New Task
+            Create Task
           </Button>
         </div>
       </div>
 
-      {/* Kanban Board Architecture Preview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {columns.map((col) => (
-          <div
-            key={col.id}
-            className={`
-              flex flex-col bg-[#151D2E] border border-[#263247] rounded-xl overflow-hidden
-              border-t-2 ${col.color} min-h-[380px]
-            `}
-          >
-            <div className="p-3.5 border-b border-[#263247]/60 flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#F8FAFC]">
-                {col.title}
-              </span>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#111827] text-[#94A3B8] font-mono">
-                0
-              </span>
+      {/* 2. Tasks Toolbar */}
+      <Card className="border-[#263247] bg-[#151D2E]">
+        <CardContent className="p-3.5 sm:p-4 space-y-3">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="flex-1 max-w-md">
+              <Input
+                placeholder="Search tasks..."
+                leftIcon={<Search className="w-4 h-4" />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
 
-            <div className="p-3 flex-1 flex flex-col items-center justify-center text-center">
-              <p className="text-xs text-[#64748B]">No tasks in this stage</p>
+            {/* View Switcher Controls */}
+            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+              <div className="flex items-center p-1 rounded-lg bg-[#111827] border border-[#263247]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-[#1E293B] text-white shadow-sm'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                  aria-label="List View"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>List</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('board')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    viewMode === 'board'
+                      ? 'bg-[#1E293B] text-white shadow-sm'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                  aria-label="Board View"
+                >
+                  <Columns className="w-3.5 h-3.5" />
+                  <span>Board</span>
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Filter Pills / Selectors Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 border-t border-[#263247]/50">
+            <Select
+              options={statusFilterOptions}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            />
+            <Select
+              options={priorityFilterOptions}
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            />
+            <Select
+              options={assigneeFilterOptions}
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+            />
+            <Select
+              options={eventFilterOptions}
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value)}
+            />
+            <div className="col-span-2 sm:col-span-1">
+              <Select
+                options={sortOptions}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Task Views: List View or Board View */}
+      {viewMode === 'list' ? (
+        <TaskList
+          tasks={tasks}
+          onViewTask={handleViewTask}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        />
+      ) : (
+        <TaskBoard
+          tasks={tasks}
+          onViewTask={handleViewTask}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        />
+      )}
+
+      {/* 4. Task Operations Shortcuts */}
+      <TaskQuickActions
+        onOpenCreateModal={() => setIsCreateModalOpen(true)}
+      />
+
+      {/* 5. Create Task Modal */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
