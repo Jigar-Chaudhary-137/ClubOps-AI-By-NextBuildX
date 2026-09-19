@@ -71,6 +71,9 @@ const announcementSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant query index
+announcementSchema.index({ club: 1, event: 1, status: 1, publishedAt: -1 });
+
 const Announcement = mongoose.models.Announcement || mongoose.model('Announcement', announcementSchema);
 
 module.exports = Announcement;

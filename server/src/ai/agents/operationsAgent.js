@@ -142,19 +142,27 @@ const runOperationsAgent = async ({ user, clubId, message, eventId = null, dryRu
     }
   } catch (err) {
     console.warn(`[AI Agent] Gemini call failed (${err.message}). Using deterministic tool dispatcher.`);
-    // If user message is clearly requesting task creation/assignment, execute directly
     const lower = (message || '').toLowerCase();
-    if (lower.includes('task') && (lower.includes('create') || lower.includes('assign'))) {
+    const targetEventId = eventId || (activeEvent ? activeEvent._id : null);
+    if (lower.includes('task') && (lower.includes('create') || lower.includes('assign')) && targetEventId) {
+      let targetName = 'Priya';
+      for (const m of clubMembers) {
+        if (m.name && lower.includes(m.name.toLowerCase().split(' ')[0])) {
+          targetName = m.name;
+          break;
+        }
+      }
       const toolResult = await executeTool('create_task', {
         title: 'Stage Sound Testing & AV Setup',
         description: 'Conduct preliminary sound check with auditorium audio team',
         priority: 'high',
-        assignedToName: 'Rahul'
+        eventId: targetEventId.toString(),
+        assignedToName: targetName
       }, { user, clubId, dryRun });
       actionsExecuted.push(toolResult);
       finalReply = dryRun
-        ? '[DRY-RUN] Proposed creating task "Stage Sound Testing & AV Setup" assigned to Rahul.'
-        : 'Successfully created task "Stage Sound Testing & AV Setup" and assigned to Rahul.';
+        ? `[DRY-RUN] Proposed creating task "Stage Sound Testing & AV Setup" assigned to ${targetName}.`
+        : `Successfully created task "Stage Sound Testing & AV Setup" and assigned to ${targetName}.`;
     } else {
       finalReply = 'I understood your request and checked operational parameters.';
     }

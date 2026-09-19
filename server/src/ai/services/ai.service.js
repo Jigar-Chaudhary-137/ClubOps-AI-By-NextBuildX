@@ -197,10 +197,22 @@ const generateAnnouncement = async (clubId, { eventId, topic, targetAudience = '
     eventContext
   });
 
-  const rawAiResult = await generateStructured(prompt, {
-    workflow: 'announcementGenerator',
-    systemInstruction: 'You are an articulate communications assistant generating publication-ready Markdown club announcements.'
-  });
+  let rawAiResult;
+  try {
+    rawAiResult = await generateStructured(prompt, {
+      workflow: 'announcementGenerator',
+      systemInstruction: 'You are an articulate communications assistant generating publication-ready Markdown club announcements.'
+    });
+  } catch (err) {
+    console.warn(`[Announcement AI] Upstream Gemini failed (${err.message}). Using deterministic fallback generator.`);
+    const bullets = keyPoints.map((kp) => `- ${kp}`).join('\n');
+    rawAiResult = {
+      title: `${topic.trim()}`,
+      content: `📢 **Announcement: ${topic.trim()}**\n\nDear ${targetAudience},\n\nWe are excited to share key updates regarding our upcoming activities:\n\n${bullets || '- Important operational details and deadlines.'}\n\nPlease mark your calendars and stay tuned for further updates!`,
+      priority: 'normal',
+      suggestedCallToAction: 'Check club portal for full details'
+    };
+  }
 
   const allowedPriorities = ['low', 'normal', 'high', 'urgent'];
   let priority = (rawAiResult.priority || 'normal').toLowerCase();
