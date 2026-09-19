@@ -1,6 +1,19 @@
 const mongoose = require('mongoose');
 const config = require('../config/env');
 
+// Register all Mongoose domain models
+require('../models/Club');
+require('../models/User');
+require('../models/Event');
+require('../models/Task');
+require('../models/Volunteer');
+require('../models/Meeting');
+require('../models/Document');
+require('../models/Risk');
+require('../models/Announcement');
+require('../models/Notification');
+require('../models/BroadcastDelivery');
+
 const readyStateMap = {
   0: 'disconnected',
   1: 'connected',
