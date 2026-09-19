@@ -19,6 +19,7 @@ import MeetingDetailsPage from '../pages/meetings/MeetingDetailsPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
 import DocumentDetailsPage from '../pages/documents/DocumentDetailsPage';
 import RisksPage from '../pages/risks/RisksPage';
+import RiskDetailsPage from '../pages/risks/RiskDetailsPage';
 import AnnouncementsPage from '../pages/announcements/AnnouncementsPage';
 import AIAssistantPage from '../pages/ai/AIAssistantPage';
 import NotFoundPage from '../pages/NotFoundPage';
@@ -48,6 +49,7 @@ export default function AppRoutes() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/:documentId" element={<DocumentDetailsPage />} />
         <Route path="/risks" element={<RisksPage />} />
+        <Route path="/risks/:riskId" element={<RiskDetailsPage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
         <Route path="/ai" element={<AIAssistantPage />} />
         <Route path="*" element={<NotFoundPage />} />
