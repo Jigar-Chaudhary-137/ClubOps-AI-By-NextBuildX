@@ -9,6 +9,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import LoginPage from '../pages/auth/LoginPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import EventsPage from '../pages/events/EventsPage';
+import EventDetailsPage from '../pages/events/EventDetailsPage';
 import TasksPage from '../pages/tasks/TasksPage';
 import VolunteersPage from '../pages/volunteers/VolunteersPage';
 import MeetingsPage from '../pages/meetings/MeetingsPage';
@@ -33,6 +34,7 @@ export default function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/events" element={<EventsPage />} />
+        <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/volunteers" element={<VolunteersPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
