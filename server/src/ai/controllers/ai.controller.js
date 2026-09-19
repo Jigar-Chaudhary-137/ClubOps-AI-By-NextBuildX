@@ -102,10 +102,73 @@ const generateAnnouncement = async (req, res, next) => {
   }
 };
 
+const chatWithAgent = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const result = await aiService.chatWithAgent(clubId, req.user, req.body);
+    return successResponse(res, {
+      status: 200,
+      message: result.dryRun ? 'Operations agent simulation completed' : 'Operations agent request completed',
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+const applyMeetingActions = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const result = await aiService.applyMeetingActions(clubId, req.user, req.params.id, req.body);
+    return successResponse(res, {
+      status: 200,
+      message: `Successfully applied ${result.totalCreated} action items as active tasks`,
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+const applyEventPlan = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const result = await aiService.applyEventPlan(clubId, req.user, req.params.id, req.body);
+    return successResponse(res, {
+      status: 200,
+      message: `Successfully created ${result.totalCreated} event tasks from plan`,
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   planEvent,
   processMeeting,
   extractActions,
   analyzeRisks,
-  generateAnnouncement
+  generateAnnouncement,
+  chatWithAgent,
+  applyMeetingActions,
+  applyEventPlan
 };
