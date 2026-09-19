@@ -3,14 +3,17 @@ const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 
+const { handleDocumentUpload } = require('../middleware/upload');
+
 const router = express.Router();
 
 // Apply authentication to all document routes
 router.use(authenticate);
 
-// List and Create
+// List and Create / Upload
 router.get('/', documentController.getDocuments);
 router.post('/', authorize('admin', 'organizer'), documentController.createDocument);
+router.post('/upload', authorize('admin', 'organizer'), handleDocumentUpload, documentController.uploadDocument);
 
 // Single Document
 router.get('/:id', documentController.getDocumentById);

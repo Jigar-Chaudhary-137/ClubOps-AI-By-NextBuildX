@@ -17,4 +17,7 @@ router.get('/:id', announcementController.getAnnouncementById);
 router.put('/:id', authorize('admin', 'organizer'), announcementController.updateAnnouncement);
 router.delete('/:id', authorize('admin', 'organizer'), announcementController.deleteAnnouncement);
 
+// Multi-channel Broadcast
+router.post('/:id/broadcast', authorize('admin', 'organizer'), announcementController.broadcastAnnouncement);
+
 module.exports = router;

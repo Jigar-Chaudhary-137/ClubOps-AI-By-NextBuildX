@@ -69,7 +69,9 @@ const meetingSchema = new mongoose.Schema(
         title: { type: String },
         assignedTo: { type: String },
         deadline: { type: String },
-        priority: { type: String }
+        priority: { type: String },
+        applied: { type: Boolean, default: false },
+        createdTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null }
       }
     ],
     createdBy: {

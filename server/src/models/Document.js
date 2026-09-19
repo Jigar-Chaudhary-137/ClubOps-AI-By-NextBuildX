@@ -59,6 +59,84 @@ const documentSchema = new mongoose.Schema(
     contentSummary: {
       type: String,
       default: ''
+    },
+    // Stage 6: RAG Knowledge Base & Chunk Embeddings
+    chunks: [
+      {
+        chunkIndex: {
+          type: Number,
+          required: true
+        },
+        text: {
+          type: String,
+          required: true
+        },
+        embedding: {
+          type: [Number],
+          default: []
+        },
+        pageNumber: {
+          type: Number,
+          default: null
+        },
+        tokenCount: {
+          type: Number,
+          default: 0
+        },
+        startOffset: {
+          type: Number,
+          default: 0
+        },
+        endOffset: {
+          type: Number,
+          default: 0
+        }
+      }
+    ],
+    ingestionStatus: {
+      type: String,
+      enum: {
+        values: ['pending', 'processing', 'processed', 'failed'],
+        message: '{VALUE} is not a valid ingestion status'
+      },
+      default: 'pending',
+      index: true
+    },
+    ingestionError: {
+      type: String,
+      default: null
+    },
+    extractedCharacterCount: {
+      type: Number,
+      default: 0
+    },
+    chunkCount: {
+      type: Number,
+      default: 0
+    },
+    embeddingModel: {
+      type: String,
+      default: null
+    },
+    embeddingVersion: {
+      type: String,
+      default: '1.0'
+    },
+    processedAt: {
+      type: Date,
+      default: null
+    },
+    sourceFileName: {
+      type: String,
+      default: null
+    },
+    mimeType: {
+      type: String,
+      default: null
+    },
+    fileSize: {
+      type: Number,
+      default: 0
     }
   },
   {
@@ -71,6 +149,10 @@ const documentSchema = new mongoose.Schema(
     }
   }
 );
+
+// Multi-tenant compound index for fast RAG candidate retrieval
+documentSchema.index({ club: 1, isKnowledgeBase: 1, ingestionStatus: 1 });
+documentSchema.index({ club: 1, event: 1, isKnowledgeBase: 1, ingestionStatus: 1 });
 
 const Document = mongoose.models.Document || mongoose.model('Document', documentSchema);
 

@@ -1,28 +1,20 @@
 const express = require('express');
-const { getDatabaseStatus } = require('../db/connection');
+const healthController = require('../controllers/health.controller');
 
 const router = express.Router();
 
 /**
  * @route   GET /api/health
- * @desc    Health check endpoint with live database status
+ * @desc    Basic health check endpoint with database readyState
  * @access  Public
  */
-router.get('/', (req, res) => {
-  const dbStatus = getDatabaseStatus();
-  const isHealthy = dbStatus.readyState === 1;
+router.get('/', healthController.getHealth);
 
-  const responsePayload = {
-    success: isHealthy,
-    message: isHealthy ? 'ClubOps API is running' : 'ClubOps API is running but database is degraded/disconnected',
-    timestamp: new Date().toISOString(),
-    database: {
-      status: dbStatus.status,
-      readyState: dbStatus.readyState
-    }
-  };
-
-  return res.status(isHealthy ? 200 : 503).json(responsePayload);
-});
+/**
+ * @route   GET /api/health/full
+ * @desc    Deep subsystem diagnostic health check (MongoDB, Gemini, RAG, SSE, Process)
+ * @access  Public
+ */
+router.get('/full', healthController.getFullHealth);
 
 module.exports = router;
