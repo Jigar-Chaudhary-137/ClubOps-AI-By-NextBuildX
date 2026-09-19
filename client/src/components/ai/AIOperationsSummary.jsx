@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -8,43 +8,88 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { getTasks } from '../../services/api/tasks';
+import { getRisks } from '../../services/api/risks';
+import { getMeetings } from '../../services/api/meetings';
+import { getAnnouncements } from '../../services/api/announcements';
 
 export default function AIOperationsSummary({ className = '' }) {
+  const [metrics, setMetrics] = useState({
+    pendingTasks: 0,
+    criticalRisks: 0,
+    recentMeetings: 0,
+    announcements: 0,
+    loading: true,
+  });
+
+  useEffect(() => {
+    async function loadSummary() {
+      try {
+        const [tasksRes, risksRes, meetingsRes, annRes] = await Promise.allSettled([
+          getTasks({ limit: 100 }),
+          getRisks({ limit: 100 }),
+          getMeetings({ limit: 50 }),
+          getAnnouncements({ limit: 50 }),
+        ]);
+
+        const tasks = tasksRes.status === 'fulfilled' ? (tasksRes.value?.data || tasksRes.value?.tasks || []) : [];
+        const risks = risksRes.status === 'fulfilled' ? (risksRes.value?.data || risksRes.value?.risks || []) : [];
+        const meetings = meetingsRes.status === 'fulfilled' ? (meetingsRes.value?.data || meetingsRes.value?.meetings || []) : [];
+        const announcements = annRes.status === 'fulfilled' ? (annRes.value?.data || annRes.value?.announcements || []) : [];
+
+        const pendingCount = tasks.filter((t) => t.status !== 'completed').length;
+        const criticalCount = risks.filter((r) => r.severity === 'high' || r.severity === 'critical').length;
+
+        setMetrics({
+          pendingTasks: pendingCount,
+          criticalRisks: criticalCount,
+          recentMeetings: meetings.length,
+          announcements: announcements.length,
+          loading: false,
+        });
+      } catch (err) {
+        console.error('Failed to load AI operations summary:', err);
+        setMetrics((p) => ({ ...p, loading: false }));
+      }
+    }
+    loadSummary();
+  }, []);
+
   const sections = [
     {
       title: 'Operational Attention',
       icon: AlertTriangle,
-      value: '—',
+      value: metrics.loading ? '...' : `${metrics.criticalRisks} Critical`,
       color: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-      note: 'Critical items flagged by AI analysis',
+      note: 'High severity operational risks',
     },
     {
       title: 'Upcoming Priorities',
       icon: Clock,
-      value: '—',
+      value: metrics.loading ? '...' : `${metrics.pendingTasks} Pending`,
       color: 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20',
-      note: 'Key deadlines across events and teams',
+      note: 'Tasks requiring completion',
     },
     {
       title: 'Potential Risks',
       icon: Activity,
-      value: '—',
+      value: metrics.loading ? '...' : `${metrics.criticalRisks} Active`,
       color: 'text-rose-400 bg-rose-400/10 border-rose-400/20',
-      note: 'Predicted bottlenecks and logistical blockers',
+      note: 'Identified hazard monitoring',
     },
     {
-      title: 'Recent Changes',
+      title: 'Recent Meetings',
       icon: RefreshCw,
-      value: '—',
+      value: metrics.loading ? '...' : `${metrics.recentMeetings} Logged`,
       color: 'text-sky-400 bg-sky-400/10 border-sky-400/20',
-      note: 'Cross-module workspace modifications',
+      note: 'Minutes & action items',
     },
     {
-      title: 'Recommended Actions',
+      title: 'Announcements',
       icon: Zap,
-      value: '—',
+      value: metrics.loading ? '...' : `${metrics.announcements} Sent`,
       color: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-      note: 'AI proposals ready for organizer review',
+      note: 'Multi-channel communications',
     },
   ];
 
@@ -57,11 +102,14 @@ export default function AIOperationsSummary({ className = '' }) {
             AI Operations Summary
           </h4>
         </div>
-        <span className="text-[10px] text-gray-500 font-mono">Real-Time Sync</span>
+        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Live Sync
+        </span>
       </div>
 
       <p className="text-xs text-gray-400 leading-relaxed">
-        AI operational summaries will appear here once connected to club data.
+        Real-time operational summary computed from active workspace records.
       </p>
 
       <div className="space-y-2.5 pt-1">
@@ -85,7 +133,7 @@ export default function AIOperationsSummary({ className = '' }) {
                   </span>
                 </div>
               </div>
-              <span className="text-sm font-bold text-gray-400 font-mono px-2 py-0.5 rounded bg-[#111827] border border-[#263247]">
+              <span className="text-xs font-bold text-gray-200 font-mono px-2 py-0.5 rounded bg-[#111827] border border-[#263247]">
                 {sec.value}
               </span>
             </div>

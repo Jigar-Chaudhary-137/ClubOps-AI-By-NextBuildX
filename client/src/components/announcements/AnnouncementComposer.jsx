@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Clock, Sparkles, CheckCircle2, AlertCircle, FileText, Users, Radio, Calendar } from 'lucide-react';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
@@ -9,20 +9,17 @@ import AnnouncementChannelSelector from './AnnouncementChannelSelector';
 import AnnouncementSchedule from './AnnouncementSchedule';
 import AnnouncementPreview from './AnnouncementPreview';
 
-const eventOptions = [
-  { value: '', label: 'Select event (optional)' },
-  { value: 'none', label: 'No Specific Event' }
-];
-
 export default function AnnouncementComposer({
   initialData = {},
+  initialPrompt = '',
+  events = [],
   onSubmit,
   onCancel,
   className = ''
 }) {
   const [formData, setFormData] = useState({
-    title: initialData.title || '',
-    message: initialData.message || '',
+    title: initialData.title || (initialPrompt ? 'AI Generated Announcement' : ''),
+    message: initialData.message || initialData.content || initialPrompt || '',
     audience: initialData.audience || 'Entire Club',
     channel: initialData.channel || 'In-App',
     event: initialData.event || '',
@@ -31,9 +28,23 @@ export default function AnnouncementComposer({
     scheduledTime: initialData.scheduledTime || ''
   });
 
+  useEffect(() => {
+    if (initialPrompt && !formData.message) {
+      setFormData((prev) => ({
+        ...prev,
+        title: initialData.title || 'Operational Update',
+        message: initialPrompt,
+      }));
+    }
+  }, [initialPrompt]);
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notice, setNotice] = useState(null);
+
+  const eventOptions = [
+    { value: '', label: 'Select event (optional)' },
+    ...(events.map((e) => ({ value: e.id || e._id, label: e.name || e.title }))),
+  ];
 
   const validate = () => {
     const newErrors = {};
@@ -43,28 +54,39 @@ export default function AnnouncementComposer({
     if (!formData.message.trim()) {
       newErrors.message = 'Message content is required.';
     }
-    if (!formData.audience) {
-      newErrors.audience = 'Target audience is required.';
-    }
-    if (!formData.channel) {
-      newErrors.channel = 'Delivery channel is required.';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (actionType) => {
+  const handleSubmit = async (actionType) => {
     if (!validate()) return;
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    let audienceKey = 'all';
+    const audLower = (formData.audience || '').toLowerCase();
+    if (audLower.includes('volunteer')) audienceKey = 'volunteers';
+    else if (audLower.includes('organizer')) audienceKey = 'organizers';
+    else if (audLower.includes('member')) audienceKey = 'members';
+
+    const payload = {
+      title: formData.title.trim(),
+      content: formData.message.trim(),
+      targetAudience: audienceKey,
+      channels: [formData.channel ? formData.channel.toLowerCase().replace('-', '_') : 'in_app'],
+      event: formData.event || null,
+      status: actionType === 'draft' ? 'draft' : formData.scheduleType === 'later' ? 'scheduled' : 'published',
+      scheduledFor: formData.scheduleType === 'later' && formData.scheduledDate
+        ? new Date(`${formData.scheduledDate}T${formData.scheduledTime || '09:00'}:00`).toISOString()
+        : null
+    };
+
+    try {
+      if (onSubmit) {
+        await onSubmit(payload);
+      }
+    } finally {
       setIsSubmitting(false);
-      setNotice('Announcement creation will be connected when the backend API is available.');
-      setTimeout(() => {
-        setNotice(null);
-        onSubmit?.(formData, actionType);
-      }, 2500);
-    }, 400);
+    }
   };
 
   const scheduleDisplay = formData.scheduleType === 'later' && formData.scheduledDate
@@ -73,13 +95,6 @@ export default function AnnouncementComposer({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {notice && (
-        <div className="p-3.5 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2.5 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{notice}</span>
-        </div>
-      )}
-
       {/* 1. Content Section */}
       <div className="p-5 rounded-xl bg-[#151D2E] border border-[#263247] space-y-4">
         <div className="flex items-center gap-2 pb-2 border-b border-[#263247]/60">
@@ -132,7 +147,6 @@ export default function AnnouncementComposer({
           selectedAudience={formData.audience}
           onChange={(aud) => setFormData((p) => ({ ...p, audience: aud }))}
         />
-        {errors.audience && <p className="text-xs text-[#EF4444]">{errors.audience}</p>}
       </div>
 
       {/* 3. Delivery Channel Section */}
@@ -146,7 +160,6 @@ export default function AnnouncementComposer({
           selectedChannel={formData.channel}
           onChange={(chan) => setFormData((p) => ({ ...p, channel: chan }))}
         />
-        {errors.channel && <p className="text-xs text-[#EF4444]">{errors.channel}</p>}
       </div>
 
       {/* 4. Scheduling Section */}

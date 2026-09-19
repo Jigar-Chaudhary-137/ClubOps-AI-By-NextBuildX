@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Clock,
   Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -26,55 +27,13 @@ import {
   AnnouncementQuickActions,
   AnnouncementActivity,
 } from '../../components/announcements';
-
-// Pre-populated realistic initial announcements for local preview and demonstration
-const initialAnnouncements = [
-  {
-    id: 'announcement-101',
-    title: 'TechSprint Hackathon 2026 — Venue & Check-In Guide',
-    message: 'Welcome hackers! Check-in starts at 9:00 AM at the Student Activity Center Main Hall. Bring your student ID, laptop, and charger. Join the Discord server for mentorship channels and live team formation announcements.',
-    status: 'scheduled',
-    channels: ['email', 'in_app'],
-    audience: 'event_participants',
-    eventId: 'techsprint-2026',
-    eventName: 'TechSprint Hackathon 2026',
-    scheduledFor: '2026-09-22T09:00:00Z',
-    publishedAt: null,
-    authorName: 'Alex Chen (Lead Organizer)',
-    createdAt: '2026-09-18T10:30:00Z',
-    updatedAt: '2026-09-19T08:15:00Z',
-  },
-  {
-    id: 'announcement-102',
-    title: 'Mandatory Volunteer Briefing — Logistics Walkthrough',
-    message: 'All confirmed volunteers for TechSprint are required to attend our pre-event logistics walkthrough on Friday at 5:00 PM in Room 304. We will distribute volunteer t-shirts, badge scanners, and emergency contact sheets.',
-    status: 'published',
-    channels: ['whatsapp', 'in_app'],
-    audience: 'volunteers',
-    eventId: 'techsprint-2026',
-    eventName: 'TechSprint Hackathon 2026',
-    scheduledFor: null,
-    publishedAt: '2026-09-17T16:00:00Z',
-    authorName: 'Sarah Jenkins (Volunteer Lead)',
-    createdAt: '2026-09-17T14:20:00Z',
-    updatedAt: '2026-09-17T16:00:00Z',
-  },
-  {
-    id: 'announcement-103',
-    title: 'Spring Core Committee Applications Now Open',
-    message: 'Looking to build leadership skills and manage high-impact collegiate events? Applications are officially open for the Spring 2027 Core Committee across Logistics, Marketing, Technical, and Sponsorship tracks.',
-    status: 'draft',
-    channels: ['in_app', 'push'],
-    audience: 'entire_club',
-    eventId: null,
-    eventName: null,
-    scheduledFor: null,
-    publishedAt: null,
-    authorName: 'Marcus Vance (President)',
-    createdAt: '2026-09-19T06:45:00Z',
-    updatedAt: '2026-09-19T06:45:00Z',
-  },
-];
+import {
+  getAnnouncements,
+  createAnnouncement,
+  deleteAnnouncement,
+  publishAnnouncement,
+} from '../../services/api/announcements';
+import { getEvents } from '../../services/api/events';
 
 const statusFilterOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -96,12 +55,10 @@ const channelFilterOptions = [
 
 const audienceFilterOptions = [
   { value: 'all', label: 'All Audiences' },
-  { value: 'entire_club', label: 'Entire Club' },
-  { value: 'event_participants', label: 'Event Participants' },
-  { value: 'volunteers', label: 'Volunteers' },
+  { value: 'all_members', label: 'Entire Club' },
   { value: 'organizers', label: 'Organizers' },
-  { value: 'trainers', label: 'Trainers / Mentors' },
-  { value: 'custom', label: 'Custom Audience' },
+  { value: 'volunteers', label: 'Volunteers' },
+  { value: 'members', label: 'Members' },
 ];
 
 const sortOptions = [
@@ -112,8 +69,12 @@ const sortOptions = [
 
 export default function AnnouncementsPage() {
   const navigate = useNavigate();
-  const [announcements, setAnnouncements] = useState(initialAnnouncements);
+  const [announcements, setAnnouncements] = useState([]);
+  const [eventsList, setEventsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [aiDraftPrompt, setAiDraftPrompt] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [notice, setNotice] = useState(null);
 
@@ -124,20 +85,50 @@ export default function AnnouncementsPage() {
   const [audienceFilter, setAudienceFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
+  const fetchAnnouncementsData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [annRes, eventsRes] = await Promise.allSettled([
+        getAnnouncements({ limit: 100 }),
+        getEvents({ limit: 50 })
+      ]);
+
+      if (annRes.status === 'fulfilled') {
+        const data = annRes.value?.data || annRes.value?.announcements || [];
+        setAnnouncements(Array.isArray(data) ? data : []);
+      }
+      if (eventsRes.status === 'fulfilled') {
+        const evts = eventsRes.value?.data || eventsRes.value?.events || [];
+        setEventsList(Array.isArray(evts) ? evts.map(e => ({ id: e._id || e.id, name: e.title })) : []);
+      }
+    } catch (err) {
+      console.error('Failed to load announcements:', err);
+      setError(err.message || 'Failed to load announcements');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncementsData();
+  }, []);
+
   // Stats calculation
   const stats = useMemo(() => {
     const total = announcements.length;
     const scheduled = announcements.filter((a) => a.status === 'scheduled').length;
-    const published = announcements.filter((a) => a.status === 'published').length;
+    const published = announcements.filter((a) => a.status === 'published' || !a.status).length;
     
-    // Distinct channels across all announcements
     const channelSet = new Set();
     announcements.forEach((a) => {
       if (Array.isArray(a.channels)) {
         a.channels.forEach((ch) => channelSet.add(ch));
+      } else {
+        channelSet.add('in_app');
       }
     });
-    const activeChannels = channelSet.size;
+    const activeChannels = channelSet.size || 1;
 
     return { total, scheduled, published, activeChannels };
   }, [announcements]);
@@ -146,23 +137,23 @@ export default function AnnouncementsPage() {
   const filteredAnnouncements = useMemo(() => {
     return announcements
       .filter((item) => {
-        // Search
+        const titleText = item.title || '';
+        const msgText = item.message || item.content || '';
+        const evtText = item.eventName || (item.event && item.event.title) || '';
+
         const matchesSearch =
           searchQuery === '' ||
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (item.eventName && item.eventName.toLowerCase().includes(searchQuery.toLowerCase()));
+          titleText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          msgText.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evtText.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // Status
-        const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || (item.status || 'published') === statusFilter;
 
-        // Channel
         const matchesChannel =
           channelFilter === 'all' ||
           (Array.isArray(item.channels) && item.channels.includes(channelFilter));
 
-        // Audience
-        const matchesAudience = audienceFilter === 'all' || item.audience === audienceFilter;
+        const matchesAudience = audienceFilter === 'all' || (item.targetAudience || item.audience) === audienceFilter;
 
         return matchesSearch && matchesStatus && matchesChannel && matchesAudience;
       })
@@ -174,27 +165,28 @@ export default function AnnouncementsPage() {
           return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
         }
         if (sortBy === 'title') {
-          return a.title.localeCompare(b.title);
+          return (a.title || '').localeCompare(b.title || '');
         }
         return 0;
       });
   }, [announcements, searchQuery, statusFilter, channelFilter, audienceFilter, sortBy]);
 
-  const handleCreateSave = (newAnnouncement) => {
-    const created = {
-      ...newAnnouncement,
-      id: `announcement-${Date.now()}`,
-      authorName: 'Alex Chen (Current User)',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setAnnouncements((prev) => [created, ...prev]);
-    setIsCreateModalOpen(false);
+  const handleCreateSave = async (payload) => {
+    try {
+      await createAnnouncement(payload);
+      setIsCreateModalOpen(false);
+      setNotice('Announcement created successfully!');
+      setTimeout(() => setNotice(null), 4000);
+      fetchAnnouncementsData();
+    } catch (err) {
+      console.error('Failed to create announcement:', err);
+      setNotice(err.response?.data?.message || err.message || 'Failed to create announcement');
+    }
   };
 
-  const handleAIActionNotice = () => {
-    setNotice('AI announcement generation will be available once the Gemini service is connected.');
-    setTimeout(() => setNotice(null), 5000);
+  const handleApplyAiPrompt = (promptText) => {
+    setAiDraftPrompt(promptText);
+    setIsCreateModalOpen(true);
   };
 
   return (
@@ -218,9 +210,18 @@ export default function AnnouncementsPage() {
         {/* Header Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchAnnouncementsData}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />}
+          >
+            Refresh
+          </Button>
+
+          <Button
             variant="ai"
             size="sm"
-            onClick={handleAIActionNotice}
+            onClick={() => handleApplyAiPrompt('Draft an operational update for active club members')}
             leftIcon={<Sparkles className="w-3.5 h-3.5" />}
           >
             AI Assistant
@@ -229,7 +230,10 @@ export default function AnnouncementsPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setAiDraftPrompt(null);
+              setIsCreateModalOpen(true);
+            }}
             leftIcon={<Plus className="w-4 h-4" />}
           >
             Create Announcement
@@ -255,7 +259,7 @@ export default function AnnouncementsPage() {
               <span className="text-xs font-medium">Total Announcements</span>
               <Megaphone className="w-4 h-4 text-indigo-400" />
             </div>
-            <p className="text-xl font-bold text-white font-mono">{stats.total}</p>
+            <p className="text-xl font-bold text-white font-mono">{loading ? '...' : stats.total}</p>
             <p className="text-[11px] text-[#64748B]">Across all club channels</p>
           </CardContent>
         </Card>
@@ -266,7 +270,7 @@ export default function AnnouncementsPage() {
               <span className="text-xs font-medium">Scheduled</span>
               <Calendar className="w-4 h-4 text-purple-400" />
             </div>
-            <p className="text-xl font-bold text-white font-mono">{stats.scheduled}</p>
+            <p className="text-xl font-bold text-white font-mono">{loading ? '...' : stats.scheduled}</p>
             <p className="text-[11px] text-[#64748B]">Pending dispatch timeline</p>
           </CardContent>
         </Card>
@@ -277,7 +281,7 @@ export default function AnnouncementsPage() {
               <span className="text-xs font-medium">Published</span>
               <Send className="w-4 h-4 text-emerald-400" />
             </div>
-            <p className="text-xl font-bold text-white font-mono">{stats.published}</p>
+            <p className="text-xl font-bold text-white font-mono">{loading ? '...' : stats.published}</p>
             <p className="text-[11px] text-[#64748B]">Delivered to target recipients</p>
           </CardContent>
         </Card>
@@ -288,7 +292,7 @@ export default function AnnouncementsPage() {
               <span className="text-xs font-medium">Active Channels</span>
               <Radio className="w-4 h-4 text-sky-400" />
             </div>
-            <p className="text-xl font-bold text-white font-mono">{stats.activeChannels}</p>
+            <p className="text-xl font-bold text-white font-mono">{loading ? '...' : stats.activeChannels}</p>
             <p className="text-[11px] text-[#64748B]">In-App, Email, WhatsApp, Push</p>
           </CardContent>
         </Card>
@@ -296,8 +300,8 @@ export default function AnnouncementsPage() {
 
       {/* AI Assistant & Suggestions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AIAnnouncementAssistant />
-        <AIAnnouncementSuggestions />
+        <AIAnnouncementAssistant onApplyPrompt={handleApplyAiPrompt} />
+        <AIAnnouncementSuggestions onApplySuggestion={handleApplyAiPrompt} />
       </div>
 
       {/* Filter and Search Toolbar */}
@@ -378,47 +382,37 @@ export default function AnnouncementsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main List */}
         <div className="lg:col-span-3">
-          <AnnouncementList
-            announcements={filteredAnnouncements}
-            viewMode={viewMode}
-            onCreateClick={() => setIsCreateModalOpen(true)}
-          />
+          {loading ? (
+            <div className="p-12 text-center text-gray-400 bg-[#151D2E] border border-[#263247] rounded-xl flex items-center justify-center gap-2">
+              <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
+              <span>Loading announcements from backend...</span>
+            </div>
+          ) : (
+            <AnnouncementList
+              announcements={filteredAnnouncements}
+              viewMode={viewMode}
+              onCreateClick={() => setIsCreateModalOpen(true)}
+            />
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <AnnouncementQuickActions />
-          <AnnouncementActivity
-            activities={[
-              {
-                id: 'act-1',
-                action: 'Announcement Scheduled',
-                detail: 'TechSprint Hackathon Venue Guide set for Sep 22 at 9:00 AM',
-                type: 'scheduled',
-                timestamp: '2026-09-18T10:30:00Z',
-              },
-              {
-                id: 'act-2',
-                action: 'WhatsApp Broadcast Dispatched',
-                detail: 'Sent to 28 confirmed event volunteers',
-                type: 'published',
-                timestamp: '2026-09-17T16:00:00Z',
-              },
-            ]}
-          />
+          <AnnouncementQuickActions onCreateClick={() => setIsCreateModalOpen(true)} />
+          <AnnouncementActivity />
         </div>
       </div>
 
       {/* Create Announcement Modal */}
       <CreateAnnouncementModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setAiDraftPrompt(null);
+        }}
         onSave={handleCreateSave}
-        events={[
-          { id: 'techsprint-2026', name: 'TechSprint Hackathon 2026' },
-          { id: 'dev-summit', name: 'Annual DevSummit' },
-          { id: 'ai-workshop', name: 'Intro to GenAI Bootcamp' },
-        ]}
+        initialPrompt={aiDraftPrompt}
+        events={eventsList}
       />
     </div>
   );

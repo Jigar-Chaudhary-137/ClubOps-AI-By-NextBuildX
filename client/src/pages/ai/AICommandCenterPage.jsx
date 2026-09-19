@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Info,
   Lightbulb,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -23,40 +24,113 @@ import {
   AIActionCard,
   AIActionConfirmation,
   AIExecutionStatus,
-  AIInsightCard,
   AIOperationsSummary,
   AIKnowledgeSources,
   AIActivityTimeline,
   AIToolStatus,
 } from '../../components/ai';
+import { aiService } from '../../services/api/ai';
+import { createTask } from '../../services/api/tasks';
+import { createRisk } from '../../services/api/risks';
+import { createAnnouncement } from '../../services/api/announcements';
 
 export default function AICommandCenterPage() {
   const [selectedContext, setSelectedContext] = useState('all');
   const [conversationMessages, setConversationMessages] = useState([]);
+  const [executionState, setExecutionState] = useState('ready');
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [stagedAction, setStagedAction] = useState({
-    actionType: 'Create Task',
-    title: 'Finalize SAC Audio Equipment Setup & Sound Check',
-    details: 'priority: high, assignee: unassigned, deadline: 2026-09-21',
-    target: 'Tasks Module',
-  });
+  const [stagedAction, setStagedAction] = useState(null);
   const [globalNotice, setGlobalNotice] = useState(null);
+  const [apiError, setApiError] = useState(null);
 
-  const handleCommandSubmit = (promptText) => {
-    // Stage the user message locally
+  const contextLabelMap = {
+    all: 'All Club Data',
+    events: 'Events',
+    tasks: 'Tasks',
+    volunteers: 'Volunteers',
+    meetings: 'Meetings',
+    documents: 'Documents',
+    risks: 'Risks',
+    announcements: 'Announcements',
+  };
+
+  const handleCommandSubmit = async (promptText) => {
+    if (!promptText || !promptText.trim()) return;
+    setApiError(null);
+
+    // 1. Append User Message
     const userMsg = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: promptText,
+      content: promptText.trim(),
       timestamp: new Date().toISOString(),
     };
-    setConversationMessages((prev) => [...prev, userMsg]);
 
-    // Transparent feedback notice
-    setGlobalNotice('AI assistance will be available once the AI service is connected. Your inquiry has been registered in the operations console.');
-    setTimeout(() => {
-      setGlobalNotice(null);
-    }, 6000);
+    const updatedHistory = [...conversationMessages, userMsg];
+    setConversationMessages(updatedHistory);
+    setExecutionState('thinking');
+
+    try {
+      // Prepare backend payload for /api/ai/agent/chat
+      const chatHistory = conversationMessages.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : m.role,
+        content: m.content,
+      }));
+
+      const payload = {
+        message: promptText.trim(),
+        chatHistory,
+        eventId: selectedContext !== 'all' ? selectedContext : null,
+        dryRun: true,
+      };
+
+      const res = await aiService.chatWithAgent(payload.message, chatHistory, {
+        eventId: payload.eventId,
+        context: selectedContext,
+      });
+
+      const responseData = res?.data || res || {};
+
+      // Build AI message
+      const aiMsg = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: responseData.reply || responseData.content || responseData.message || 'Operational agent analysis complete.',
+        sources: responseData.sources || responseData.citations || [],
+        actionProposal: responseData.actionProposal || null,
+        timestamp: new Date().toISOString(),
+      };
+
+      setConversationMessages((prev) => [...prev, aiMsg]);
+
+      // Handle Action Proposal if generated
+      if (responseData.actionProposal) {
+        const proposal = {
+          actionType: responseData.actionProposal.actionType || 'Execute Mutation',
+          title: responseData.actionProposal.title || responseData.actionProposal.description || promptText,
+          details: responseData.actionProposal.details || responseData.actionProposal.params ? JSON.stringify(responseData.actionProposal.params) : 'Parameters pending authorization',
+          target: responseData.actionProposal.targetModule || 'Club Workspace',
+          rawProposal: responseData.actionProposal,
+        };
+        setStagedAction(proposal);
+        setExecutionState('waiting_confirmation');
+      } else {
+        setExecutionState('ready');
+      }
+    } catch (err) {
+      console.error('AI agent chat error:', err);
+      setExecutionState('failed');
+      const errorMsg = err.response?.data?.message || err.message || 'AI agent request failed';
+      setApiError(errorMsg);
+
+      const errAiMsg = {
+        id: `ai-err-${Date.now()}`,
+        role: 'assistant',
+        content: `Operational Warning: ${errorMsg}. Please try rephrasing your request or adjusting your context scope.`,
+        timestamp: new Date().toISOString(),
+      };
+      setConversationMessages((prev) => [...prev, errAiMsg]);
+    }
   };
 
   const handleSelectPrompt = (promptText) => {
@@ -68,15 +142,54 @@ export default function AICommandCenterPage() {
     setIsConfirmationOpen(true);
   };
 
-  const contextLabelMap = {
-    all: 'All Club Data',
-    events: 'Events',
-    tasks: 'Tasks',
-    volunteers: 'Volunteers',
-    meetings: 'Meetings',
-    documents: 'Documents',
-    risks: 'Risks',
-    announcements: 'Announcements',
+  const handleExecuteConfirmedAction = async (actionToExecute) => {
+    setExecutionState('executing');
+    try {
+      // 1. Direct module execution based on actionType
+      const typeStr = (actionToExecute.actionType || '').toLowerCase();
+      
+      if (typeStr.includes('task')) {
+        await createTask({
+          title: actionToExecute.title,
+          description: `Created via AI Command Center execution`,
+          priority: 'medium',
+        });
+      } else if (typeStr.includes('risk')) {
+        await createRisk({
+          title: actionToExecute.title,
+          category: 'operational',
+          severity: 'medium',
+        });
+      } else if (typeStr.includes('announcement')) {
+        await createAnnouncement({
+          title: actionToExecute.title,
+          content: actionToExecute.details || actionToExecute.title,
+        });
+      } else {
+        // Fallback to agent tool execution
+        await aiService.chatWithAgent(
+          `Execute confirmed action: ${actionToExecute.title}`,
+          [],
+          { dryRun: false }
+        );
+      }
+
+      setExecutionState('completed');
+      setGlobalNotice(`Successfully executed action: "${actionToExecute.title}"`);
+      setTimeout(() => setGlobalNotice(null), 5000);
+
+      // Append system execution message to conversation
+      const sysMsg = {
+        id: `sys-${Date.now()}`,
+        role: 'assistant',
+        content: `✅ Action Executed: "${actionToExecute.title}" has been successfully created and recorded in the club workspace.`,
+        timestamp: new Date().toISOString(),
+      };
+      setConversationMessages((prev) => [...prev, sysMsg]);
+    } catch (err) {
+      setExecutionState('failed');
+      throw err;
+    }
   };
 
   return (
@@ -105,11 +218,21 @@ export default function AICommandCenterPage() {
 
       {/* Global Status Banner if triggered */}
       {globalNotice && (
-        <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 flex items-start gap-2.5 animate-fadeIn">
-          <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 flex items-start gap-2.5 animate-fadeIn">
+          <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
             <span className="font-semibold text-white">Console Notice: </span>
             {globalNotice}
+          </div>
+        </div>
+      )}
+
+      {apiError && (
+        <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-200 flex items-start gap-2.5 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-semibold text-white">API Error: </span>
+            {apiError}
           </div>
         </div>
       )}
@@ -121,14 +244,14 @@ export default function AICommandCenterPage() {
             <div>
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Database className="w-4 h-4 text-purple-400" />
-                Connected Club Knowledge
+                Connected Club Knowledge Base
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                ClubOps AI will eventually use approved club documents, meeting knowledge, events, tasks, risks, and announcements to provide context-aware answers.
+                ClubOps AI uses uploaded club documents, meeting transcripts, events, tasks, and announcements to synthesize context-aware answers.
               </p>
             </div>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0 self-start md:self-auto">
-              RAG Architecture
+              Live RAG Engine
             </span>
           </div>
 
@@ -179,6 +302,7 @@ export default function AICommandCenterPage() {
             <AICommandBar
               onSubmit={handleCommandSubmit}
               selectedContext={contextLabelMap[selectedContext] || 'All Club Data'}
+              disabled={executionState === 'thinking'}
             />
           </div>
 
@@ -190,30 +314,32 @@ export default function AICommandCenterPage() {
             messages={conversationMessages}
             onPromptClick={handleCommandSubmit}
             onExploreSuggestions={() => {
-              handleCommandSubmit('What risks need attention?');
+              handleCommandSubmit('What operational risks need attention across our active events?');
             }}
           />
 
-          {/* Action Proposal Framework Preview */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-purple-400" />
-                  Action Proposal Foundation
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Review AI-suggested actions before they modify your club workspace.
-                </p>
+          {/* Action Proposal Foundation Card */}
+          {stagedAction && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-purple-400" />
+                    AI Action Proposal
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    Review AI-suggested actions before they modify your club workspace.
+                  </p>
+                </div>
+                <span className="text-[10px] text-purple-400 font-mono">Tool Call Ready</span>
               </div>
-              <span className="text-[10px] text-purple-400 font-mono">Tool Call Sandbox</span>
-            </div>
 
-            <AIActionCard
-              action={stagedAction}
-              onReview={handleReviewAction}
-            />
-          </div>
+              <AIActionCard
+                action={stagedAction}
+                onReview={handleReviewAction}
+              />
+            </div>
+          )}
 
           {/* Security & Trust Banner */}
           <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] flex items-start space-x-3 text-xs text-gray-400">
@@ -230,7 +356,7 @@ export default function AICommandCenterPage() {
         {/* Right Sidebar Column (1 col on desktop) */}
         <div className="space-y-6">
           {/* AI Execution Status Badge */}
-          <AIExecutionStatus status="unavailable" />
+          <AIExecutionStatus status={executionState} />
 
           {/* AI Operations Summary Panel */}
           <AIOperationsSummary />
@@ -250,7 +376,8 @@ export default function AICommandCenterPage() {
       <AIActionConfirmation
         isOpen={isConfirmationOpen}
         onClose={() => setIsConfirmationOpen(false)}
-        action={stagedAction}
+        onConfirm={handleExecuteConfirmedAction}
+        action={stagedAction || undefined}
       />
     </div>
   );

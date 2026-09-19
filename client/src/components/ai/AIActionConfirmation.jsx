@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldAlert, Terminal, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { X, ShieldAlert, Terminal, AlertTriangle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 import Button from '../ui/Button';
 
 export default function AIActionConfirmation({
   isOpen,
   onClose,
+  onConfirm,
   action = {
     actionType: 'Create Task',
     title: 'Follow-up Task for Event Logistics',
@@ -12,25 +13,45 @@ export default function AIActionConfirmation({
     target: '—',
   },
 }) {
+  const [isExecuting, setIsExecuting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isOpen && !isExecuting) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isExecuting]);
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    setFeedback({
-      type: 'info',
-      message: 'AI action execution is not connected yet. In production, this action will be executed through controlled tool contracts.',
-    });
+  const handleConfirm = async () => {
+    setIsExecuting(true);
+    setFeedback(null);
+    try {
+      if (onConfirm) {
+        await onConfirm(action);
+      }
+      setFeedback({
+        type: 'success',
+        message: `Action "${action.title || action.actionType}" confirmed and executed successfully!`,
+      });
+      setTimeout(() => {
+        setIsExecuting(false);
+        setFeedback(null);
+        onClose();
+      }, 1200);
+    } catch (err) {
+      console.error('Action execution failed:', err);
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Action execution failed. Please check parameters and retry.',
+      });
+      setIsExecuting(false);
+    }
   };
 
   return (
@@ -38,7 +59,7 @@ export default function AIActionConfirmation({
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        onClick={() => !isExecuting && onClose()}
       />
 
       {/* Modal Dialog */}
@@ -56,7 +77,8 @@ export default function AIActionConfirmation({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#263247] transition-colors"
+            disabled={isExecuting}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#263247] transition-colors disabled:opacity-50"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -65,8 +87,20 @@ export default function AIActionConfirmation({
 
         {/* Feedback Banner */}
         {feedback && (
-          <div className="mx-6 mt-4 p-3.5 bg-purple-950/50 border border-purple-500/30 rounded-xl flex items-start space-x-2.5 text-xs text-purple-200">
-            <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+          <div className={`mx-6 mt-4 p-3.5 rounded-xl flex items-start space-x-2.5 text-xs ${
+            feedback.type === 'success'
+              ? 'bg-emerald-950/50 border border-emerald-500/30 text-emerald-200'
+              : feedback.type === 'error'
+              ? 'bg-rose-950/50 border border-rose-500/30 text-rose-200'
+              : 'bg-purple-950/50 border border-purple-500/30 text-purple-200'
+          }`}>
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            ) : feedback.type === 'error' ? (
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            ) : (
+              <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+            )}
             <div>
               <span className="font-semibold text-white">Status: </span>
               {feedback.message}
@@ -128,6 +162,7 @@ export default function AIActionConfirmation({
             variant="ghost"
             size="sm"
             onClick={onClose}
+            disabled={isExecuting}
           >
             Cancel
           </Button>
@@ -135,6 +170,7 @@ export default function AIActionConfirmation({
             variant="ai"
             size="sm"
             onClick={handleConfirm}
+            isLoading={isExecuting}
           >
             Confirm Action
           </Button>

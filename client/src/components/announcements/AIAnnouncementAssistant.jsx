@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, Bot, ArrowRight, Wand2, Info, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Bot, ArrowRight, Wand2, Info, Loader2 } from 'lucide-react';
+import { generateAnnouncementContent } from '../../services/api/announcements';
 
 const AIAnnouncementAssistant = ({ onApplyPrompt }) => {
+  const [loadingPrompt, setLoadingPrompt] = useState(null);
   const [notice, setNotice] = useState(null);
 
   const samplePrompts = [
@@ -27,14 +29,23 @@ const AIAnnouncementAssistant = ({ onApplyPrompt }) => {
     },
   ];
 
-  const handleSelectPrompt = (promptText) => {
-    setNotice('AI announcement generation will be available once the Gemini service is connected. Prompt copied for draft inspiration.');
-    if (onApplyPrompt) {
-      onApplyPrompt(promptText);
+  const handleSelectPrompt = async (promptText) => {
+    setLoadingPrompt(promptText);
+    setNotice(null);
+    try {
+      const res = await generateAnnouncementContent(promptText, { targetAudience: 'all', tone: 'professional' });
+      const generated = res?.data || res || {};
+      if (onApplyPrompt) {
+        onApplyPrompt(generated.content || promptText, generated);
+      }
+    } catch (err) {
+      console.error('AI Announcement generation error:', err);
+      if (onApplyPrompt) {
+        onApplyPrompt(promptText);
+      }
+    } finally {
+      setLoadingPrompt(null);
     }
-    setTimeout(() => {
-      setNotice(null);
-    }, 6000);
   };
 
   return (
@@ -52,7 +63,7 @@ const AIAnnouncementAssistant = ({ onApplyPrompt }) => {
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 AI Announcement Assistant
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  Gemini Ready
+                  Gemini Active
                 </span>
               </h3>
               <p className="text-xs text-gray-400">
@@ -62,37 +73,37 @@ const AIAnnouncementAssistant = ({ onApplyPrompt }) => {
           </div>
         </div>
 
-        {/* Notice alert if clicked */}
-        {notice && (
-          <div className="mb-4 p-3 bg-indigo-950/50 border border-indigo-500/30 rounded-xl flex items-start space-x-2.5 text-xs text-indigo-200 animate-fadeIn">
-            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <span>{notice}</span>
-          </div>
-        )}
-
         {/* Prompt Suggestions Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          {samplePrompts.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelectPrompt(item.prompt)}
-              className="text-left p-3.5 rounded-xl bg-[#0B1020]/60 hover:bg-[#151D2E] border border-[#263247] hover:border-indigo-500/40 transition-all duration-200 group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-xs font-semibold text-gray-200 group-hover:text-indigo-300 mb-1">
-                  <span>{item.title}</span>
-                  <Wand2 className="w-3.5 h-3.5 text-gray-500 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          {samplePrompts.map((item, idx) => {
+            const isLoading = loadingPrompt === item.prompt;
+            return (
+              <button
+                key={idx}
+                onClick={() => handleSelectPrompt(item.prompt)}
+                disabled={Boolean(loadingPrompt)}
+                className="text-left p-3.5 rounded-xl bg-[#0B1020]/60 hover:bg-[#151D2E] border border-[#263247] hover:border-indigo-500/40 transition-all duration-200 group flex flex-col justify-between disabled:opacity-50"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-gray-200 group-hover:text-indigo-300 mb-1">
+                    <span>{item.title}</span>
+                    {isLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3.5 h-3.5 text-gray-500 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
+                    {item.desc}
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
-                  {item.desc}
-                </p>
-              </div>
-              <div className="mt-2 text-[10px] text-indigo-400/80 font-medium flex items-center space-x-1">
-                <span>Use prompt</span>
-                <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </button>
-          ))}
+                <div className="mt-2 text-[10px] text-indigo-400/80 font-medium flex items-center space-x-1">
+                  <span>{isLoading ? 'Generating...' : 'Use prompt'}</span>
+                  {!isLoading && <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

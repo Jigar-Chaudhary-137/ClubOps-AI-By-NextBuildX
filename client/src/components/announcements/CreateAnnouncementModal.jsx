@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { X, Bell, AlertCircle, Info, Sparkles } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, Bell } from 'lucide-react';
 import AnnouncementComposer from './AnnouncementComposer';
 
-const CreateAnnouncementModal = ({ isOpen, onClose, onSave, events = [] }) => {
-  const [notice, setNotice] = useState(null);
-
+const CreateAnnouncementModal = ({ isOpen, onClose, onSave, initialPrompt = '', events = [] }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -16,36 +14,6 @@ const CreateAnnouncementModal = ({ isOpen, onClose, onSave, events = [] }) => {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const handlePublish = (data) => {
-    setNotice({
-      type: 'info',
-      message: 'Announcement creation will be connected when the backend API is available. Your announcement has been staged locally.',
-    });
-    if (onSave) {
-      onSave({ ...data, status: 'published' });
-    }
-  };
-
-  const handleSchedule = (data) => {
-    setNotice({
-      type: 'info',
-      message: 'Announcement scheduling will be connected when the backend scheduling service is available. Your announcement has been staged locally.',
-    });
-    if (onSave) {
-      onSave({ ...data, status: 'scheduled' });
-    }
-  };
-
-  const handleDraft = (data) => {
-    setNotice({
-      type: 'info',
-      message: 'Draft saving will be connected when the backend API is available.',
-    });
-    if (onSave) {
-      onSave({ ...data, status: 'draft' });
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -77,24 +45,17 @@ const CreateAnnouncementModal = ({ isOpen, onClose, onSave, events = [] }) => {
           </button>
         </div>
 
-        {/* Notice if triggered */}
-        {notice && (
-          <div className="mx-6 mt-4 p-3.5 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-start space-x-3">
-            <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-indigo-200">
-              <span className="font-medium">Notice: </span>
-              {notice.message}
-            </div>
-          </div>
-        )}
-
         {/* Scrollable Body */}
         <div className="p-6 overflow-y-auto flex-1">
           <AnnouncementComposer
             events={events}
-            onPublish={handlePublish}
-            onSchedule={handleSchedule}
-            onDraft={handleDraft}
+            initialPrompt={initialPrompt}
+            onSubmit={async (data) => {
+              if (onSave) {
+                await onSave(data);
+              }
+            }}
+            onCancel={onClose}
           />
         </div>
       </div>
