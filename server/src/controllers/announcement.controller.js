@@ -103,10 +103,41 @@ const deleteAnnouncement = async (req, res, next) => {
   }
 };
 
+const broadcastService = require('../services/broadcast.service');
+
+const broadcastAnnouncement = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const { channels } = req.body;
+
+    const result = await broadcastService.broadcastAnnouncement(
+      clubId,
+      req.user._id,
+      req.params.id,
+      channels
+    );
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Announcement broadcast processed successfully',
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   createAnnouncement,
   getAnnouncements,
   getAnnouncementById,
   updateAnnouncement,
-  deleteAnnouncement
+  deleteAnnouncement,
+  broadcastAnnouncement
 };

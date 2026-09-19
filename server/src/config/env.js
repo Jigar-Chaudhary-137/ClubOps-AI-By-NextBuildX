@@ -11,6 +11,16 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || (isDevelopment ? 'dev_jwt_secret_key_change_in_prod' : null),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   geminiApiKey: process.env.GEMINI_API_KEY || null,
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  geminiEmbeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+  geminiEmbeddingDimension: parseInt(process.env.GEMINI_EMBEDDING_DIMENSION, 10) || 768,
+  ragChunkSize: parseInt(process.env.RAG_CHUNK_SIZE, 10) || 800,
+  ragChunkOverlap: parseInt(process.env.RAG_CHUNK_OVERLAP, 10) || 100,
+  ragTopK: parseInt(process.env.RAG_TOP_K, 10) || 5,
+  ragSimilarityThreshold: parseFloat(process.env.RAG_SIMILARITY_THRESHOLD) || 0.3,
+  maxDocumentSizeMb: parseInt(process.env.MAX_DOCUMENT_SIZE_MB, 10) || 10,
+  maxExtractedTextLength: parseInt(process.env.MAX_EXTRACTED_TEXT_LENGTH, 10) || 100000,
+  maxChunksPerDocument: parseInt(process.env.MAX_CHUNKS_PER_DOCUMENT, 10) || 200,
   isProduction,
   isDevelopment
 };
