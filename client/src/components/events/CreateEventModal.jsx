@@ -25,6 +25,32 @@ const eventStatusOptions = [
   { value: 'Completed', label: 'Completed' }
 ];
 
+const statusMapping = {
+  Planning: 'planning',
+  Upcoming: 'ready',
+  Ongoing: 'active',
+  Completed: 'completed',
+  planning: 'planning',
+  ready: 'ready',
+  active: 'active',
+  completed: 'completed',
+  draft: 'draft',
+  cancelled: 'cancelled'
+};
+
+const parseToISO = (dateStr, timeStr) => {
+  if (!dateStr) return null;
+  let dStr = dateStr.trim();
+  // Handle DD-MM-YYYY format
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dStr)) {
+    const [d, m, y] = dStr.split('-');
+    dStr = `${y}-${m}-${d}`;
+  }
+  const time = timeStr && timeStr.trim() ? timeStr.trim() : '00:00';
+  const parsed = new Date(`${dStr}T${time}`);
+  return isNaN(parsed.getTime()) ? new Date(dStr).toISOString() : parsed.toISOString();
+};
+
 export default function CreateEventModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -69,8 +95,12 @@ export default function CreateEventModal({ isOpen, onClose, onSave }) {
       newErrors.endTime = 'End time is required';
     }
 
-    if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
-      newErrors.endDate = 'End date cannot be earlier than start date';
+    if (formData.startDate && formData.endDate) {
+      const startIso = parseToISO(formData.startDate, formData.startTime);
+      const endIso = parseToISO(formData.endDate, formData.endTime);
+      if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
+        newErrors.endDate = 'End date cannot be earlier than start date';
+      }
     }
 
     setErrors(newErrors);
@@ -89,11 +119,15 @@ export default function CreateEventModal({ isOpen, onClose, onSave }) {
         title: formData.title.trim(),
         description: formData.description.trim(),
         category: formData.type || 'Technical',
-        status: formData.status ? formData.status.toLowerCase() : 'planning',
-        startDate: formData.startDate ? new Date(`${formData.startDate}T${formData.startTime || '09:00'}`).toISOString() : null,
-        endDate: formData.endDate ? new Date(`${formData.endDate}T${formData.endTime || '18:00'}`).toISOString() : null,
+        status: statusMapping[formData.status] || (formData.status ? formData.status.toLowerCase() : 'planning'),
+        startDate: parseToISO(formData.startDate, formData.startTime),
+        endDate: parseToISO(formData.endDate, formData.endTime),
         location: formData.location.trim(),
-        venue: formData.location.trim(),
+        venue: {
+          name: formData.location.trim(),
+          capacity: 0,
+          booked: false
+        }
       };
 
       if (onSave) {
