@@ -448,7 +448,7 @@ async function runSeed() {
                   providerMessageId: `sim_${channel}_${recipient._id.toString().slice(-4)}_${Date.now()}`
                 }
               },
-              { upsert: true, new: true }
+              { upsert: true, returnDocument: 'after' }
             );
             summary.broadcastDeliveries++;
           }
@@ -503,7 +503,7 @@ async function runSeed() {
             priority: np.priority,
             read: false
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: 'after' }
         );
         summary.notifications++;
       }
