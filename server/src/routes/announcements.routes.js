@@ -1,14 +1,20 @@
 const express = require('express');
-const { errorResponse } = require('../utils/apiResponse');
+const announcementController = require('../controllers/announcement.controller');
+const { authenticate } = require('../middleware/auth');
+const { authorize } = require('../middleware/authorize');
 
 const router = express.Router();
 
-// Placeholder for future announcements endpoints
-router.use((req, res) => {
-  return errorResponse(res, {
-    status: 501,
-    message: 'Announcements module is not implemented yet'
-  });
-});
+// Apply authentication to all announcement routes
+router.use(authenticate);
+
+// List and Create
+router.get('/', announcementController.getAnnouncements);
+router.post('/', authorize('admin', 'organizer'), announcementController.createAnnouncement);
+
+// Single Announcement
+router.get('/:id', announcementController.getAnnouncementById);
+router.put('/:id', authorize('admin', 'organizer'), announcementController.updateAnnouncement);
+router.delete('/:id', authorize('admin', 'organizer'), announcementController.deleteAnnouncement);
 
 module.exports = router;

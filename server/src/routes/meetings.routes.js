@@ -1,14 +1,20 @@
 const express = require('express');
-const { errorResponse } = require('../utils/apiResponse');
+const meetingController = require('../controllers/meeting.controller');
+const { authenticate } = require('../middleware/auth');
+const { authorize } = require('../middleware/authorize');
 
 const router = express.Router();
 
-// Placeholder for future meeting endpoints
-router.use((req, res) => {
-  return errorResponse(res, {
-    status: 501,
-    message: 'Meetings module is not implemented yet'
-  });
-});
+// Apply authentication to all meeting routes
+router.use(authenticate);
+
+// List and Create
+router.get('/', meetingController.getMeetings);
+router.post('/', authorize('admin', 'organizer'), meetingController.createMeeting);
+
+// Single Meeting
+router.get('/:id', meetingController.getMeetingById);
+router.put('/:id', authorize('admin', 'organizer'), meetingController.updateMeeting);
+router.delete('/:id', authorize('admin', 'organizer'), meetingController.deleteMeeting);
 
 module.exports = router;
