@@ -5,42 +5,40 @@ import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
+import { uploadDocument } from '../../services/api/documents';
 
 const categoryOptions = [
-  { value: 'Policies', label: 'Policies' },
-  { value: 'Event Planning', label: 'Event Planning' },
-  { value: 'Guidelines', label: 'Guidelines' },
-  { value: 'Training', label: 'Training' },
-  { value: 'Club Information', label: 'Club Information' },
-  { value: 'Meeting Notes', label: 'Meeting Notes' },
-  { value: 'Reports', label: 'Reports' },
-  { value: 'Other', label: 'Other' }
-];
-
-const visibilityOptions = [
-  { value: 'Club Members', label: 'Club Members' },
-  { value: 'Organizers Only', label: 'Organizers Only' }
+  { value: 'general', label: 'General / Policies' },
+  { value: 'guide', label: 'Guide & Guidelines' },
+  { value: 'policy', label: 'Official Policy' },
+  { value: 'budget', label: 'Budget & Finance' },
+  { value: 'proposal', label: 'Proposal' },
+  { value: 'report', label: 'Report' },
+  { value: 'contract', label: 'Contract & Legal' },
+  { value: 'meeting_notes', label: 'Meeting Notes' },
+  { value: 'other', label: 'Other' }
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt'];
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md', 'json'];
 
 export default function UploadDocumentModal({
   isOpen,
-  onClose
+  onClose,
+  onSuccess
 }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'Policies',
+    category: 'general',
     description: '',
-    visibility: 'Club Members',
     addToKnowledge: true
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedbackNotice, setFeedbackNotice] = useState(false);
+  const [feedbackNotice, setFeedbackNotice] = useState('');
+  const [apiError, setApiError] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -51,7 +49,7 @@ export default function UploadDocumentModal({
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       setErrors((prev) => ({
         ...prev,
-        file: 'Unsupported file type. Please upload a PDF, DOCX, or TXT file.'
+        file: 'Unsupported file extension. Allowed types: PDF, DOCX, TXT, MD, JSON'
       }));
       return;
     }
@@ -64,11 +62,10 @@ export default function UploadDocumentModal({
       return;
     }
 
-    // Clear file errors
     setErrors((prev) => ({ ...prev, file: null }));
     setSelectedFile(file);
+    setApiError('');
 
-    // Auto populate document name if empty
     if (!formData.name.trim()) {
       const baseName = file.name.replace(/\.[^/.]+$/, '');
       setFormData((prev) => ({ ...prev, name: baseName }));
@@ -112,34 +109,48 @@ export default function UploadDocumentModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setFeedbackNotice(true);
+    setApiError('');
+    setFeedbackNotice('');
+
+    try {
+      const result = await uploadDocument(selectedFile, {
+        title: formData.name.trim(),
+        category: formData.category,
+        description: formData.description.trim(),
+        isKnowledgeBase: formData.addToKnowledge
+      });
+
+      setFeedbackNotice(result?.message || 'Document uploaded and indexed successfully!');
+      if (onSuccess) onSuccess(result);
 
       setTimeout(() => {
-        setFeedbackNotice(false);
         handleModalClose();
-      }, 2500);
-    }, 500);
+      }, 1200);
+    } catch (err) {
+      console.error('Document upload error:', err);
+      setApiError(err.response?.data?.message || err.message || 'Failed to upload document');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalClose = () => {
     setSelectedFile(null);
     setFormData({
       name: '',
-      category: 'Policies',
+      category: 'general',
       description: '',
-      visibility: 'Club Members',
       addToKnowledge: true
     });
     setErrors({});
+    setApiError('');
+    setFeedbackNotice('');
     setIsSubmitting(false);
-    setFeedbackNotice(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     onClose?.();
   };
@@ -178,19 +189,17 @@ export default function UploadDocumentModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Backend Integration Info Banner */}
-        <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] text-xs text-[#94A3B8] leading-relaxed flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-[#8B5CF6] shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Integration Status:</span>{' '}
-            Document upload and processing will be connected in the next integration phase. Local validation is fully operational.
-          </div>
-        </div>
-
         {feedbackNotice && (
           <div className="p-3 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Document upload and processing will be connected in the next integration phase.</span>
+            <span>{feedbackNotice}</span>
+          </div>
+        )}
+
+        {apiError && (
+          <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#F87171] flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
           </div>
         )}
 
@@ -203,7 +212,7 @@ export default function UploadDocumentModal({
               handleFile(e.target.files[0]);
             }
           }}
-          accept=".pdf,.docx,.txt"
+          accept=".pdf,.docx,.txt,.md,.json"
           className="hidden"
         />
 
@@ -238,6 +247,8 @@ export default function UploadDocumentModal({
                 <span className="px-2 py-0.5 rounded bg-[#151D2E] border border-[#263247] font-mono">PDF</span>
                 <span className="px-2 py-0.5 rounded bg-[#151D2E] border border-[#263247] font-mono">DOCX</span>
                 <span className="px-2 py-0.5 rounded bg-[#151D2E] border border-[#263247] font-mono">TXT</span>
+                <span className="px-2 py-0.5 rounded bg-[#151D2E] border border-[#263247] font-mono">MD</span>
+                <span className="px-2 py-0.5 rounded bg-[#151D2E] border border-[#263247] font-mono">JSON</span>
                 <span>(Max 10 MB)</span>
               </div>
             </div>
@@ -265,11 +276,6 @@ export default function UploadDocumentModal({
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <p className="text-xs text-[#818CF8] bg-[#6366F1]/10 p-2.5 rounded-lg border border-[#6366F1]/20 flex items-center gap-2">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>Document processing will be available after backend integration.</span>
-            </p>
           </div>
         )}
 
@@ -290,23 +296,14 @@ export default function UploadDocumentModal({
           disabled={isSubmitting}
         />
 
-        {/* Category & Visibility */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Category"
-            options={categoryOptions}
-            value={formData.category}
-            onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
-            disabled={isSubmitting}
-          />
-          <Select
-            label="Visibility"
-            options={visibilityOptions}
-            value={formData.visibility}
-            onChange={(e) => setFormData((prev) => ({ ...prev, visibility: e.target.value }))}
-            disabled={isSubmitting}
-          />
-        </div>
+        {/* Category */}
+        <Select
+          label="Category"
+          options={categoryOptions}
+          value={formData.category}
+          onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+          disabled={isSubmitting}
+        />
 
         {/* Description */}
         <Textarea
