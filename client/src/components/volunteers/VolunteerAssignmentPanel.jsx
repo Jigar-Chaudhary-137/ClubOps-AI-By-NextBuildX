@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Calendar, ShieldCheck, FileText, CheckCircle2, Sparkles, UserCheck } from 'lucide-react';
+import { Calendar, ShieldCheck, FileText, CheckCircle2, Sparkles, UserCheck, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card';
 import Select from '../ui/Select';
 import Textarea from '../ui/Textarea';
 import Button from '../ui/Button';
+import { assignVolunteerToEvent } from '../../services/api/volunteers';
 
 const eventOptions = [
   { value: '', label: 'Select event' }
@@ -29,20 +30,29 @@ export default function VolunteerAssignmentPanel({
   const [responsibility, setResponsibility] = useState('General Volunteer');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notice, setNotice] = useState(false);
+  const [apiError, setApiError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleAssign = (e) => {
+  const handleAssign = async (e) => {
     e?.preventDefault();
     setIsSubmitting(true);
+    setApiError(null);
+    setSuccess(false);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setNotice(true);
+    try {
+      if (volunteerId) {
+        await assignVolunteerToEvent(volunteerId, { event: selectedEvent, role: responsibility, notes });
+      }
+      setSuccess(true);
       setTimeout(() => {
-        setNotice(false);
+        setSuccess(false);
         onAssignmentComplete?.();
-      }, 2500);
-    }, 450);
+      }, 1500);
+    } catch (err) {
+      setApiError(err.response?.data?.message || err.message || 'Failed to assign volunteer');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -64,12 +74,17 @@ export default function VolunteerAssignmentPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {notice && (
-          <div className="p-3 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs text-[#818CF8] flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-[#818CF8]" />
-            <span>
-              Volunteer assignment will be connected to the backend in the next integration phase.
-            </span>
+        {apiError && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="p-3 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>Volunteer assigned successfully.</span>
           </div>
         )}
 

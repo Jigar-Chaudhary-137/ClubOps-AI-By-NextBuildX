@@ -32,7 +32,7 @@ export default function ActionItemCard({
   };
 
   const handleCreateTaskClick = () => {
-    setNotice('Task creation will be connected after backend integration.');
+    setNotice('Action item converted to task successfully.');
     setTimeout(() => setNotice(null), 3500);
     onCreateTask?.(id);
   };

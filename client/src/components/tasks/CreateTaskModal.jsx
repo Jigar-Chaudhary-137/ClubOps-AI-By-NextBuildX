@@ -1,34 +1,28 @@
 import React, { useState } from 'react';
-import { Sparkles, Calendar, Clock, User, Tag, AlertCircle } from 'lucide-react';
+import { Sparkles, AlertCircle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
+import { createTask } from '../../services/api/tasks';
 
-const statusOptions = [
+const taskStatusOptions = [
   { value: 'To Do', label: 'To Do' },
   { value: 'In Progress', label: 'In Progress' },
+  { value: 'In Review', label: 'In Review' },
   { value: 'Completed', label: 'Completed' },
   { value: 'Blocked', label: 'Blocked' }
 ];
 
-const priorityOptions = [
-  { value: 'Low', label: 'Low Priority' },
-  { value: 'Medium', label: 'Medium Priority' },
-  { value: 'High', label: 'High Priority' },
+const taskPriorityOptions = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Medium', label: 'Medium' },
+  { value: 'High', label: 'High' },
   { value: 'Urgent', label: 'Urgent' }
 ];
 
-const eventOptions = [
-  { value: '', label: 'Select event (Optional)' }
-];
-
-const assigneeOptions = [
-  { value: 'Unassigned', label: 'Unassigned' }
-];
-
-export default function CreateTaskModal({ isOpen, onClose }) {
+export default function CreateTaskModal({ isOpen, onClose, onSave, events = [] }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,7 +37,12 @@ export default function CreateTaskModal({ isOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationSuccessNote, setValidationSuccessNote] = useState(false);
+  const [apiError, setApiError] = useState(null);
+
+  const eventOptions = [
+    { value: '', label: 'Select associated event (optional)' },
+    ...(events.map((e) => ({ value: e.id || e._id, label: e.name || e.title }))),
+  ];
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -61,20 +60,35 @@ export default function CreateTaskModal({ isOpen, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setValidationSuccessNote(true);
+    setApiError(null);
 
-      setTimeout(() => {
-        setValidationSuccessNote(false);
-        handleModalClose();
-      }, 1800);
-    }, 500);
+    try {
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        event: formData.event || null,
+        priority: formData.priority ? formData.priority.toLowerCase() : 'medium',
+        status: formData.status ? formData.status.toLowerCase().replace(' ', '_') : 'pending',
+        dueDate: formData.dueDate ? new Date(`${formData.dueDate}T${formData.dueTime || '18:00'}`).toISOString() : null,
+      };
+
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        await createTask(payload);
+      }
+      handleModalClose();
+    } catch (err) {
+      console.error('Failed to create task:', err);
+      setApiError(err.response?.data?.message || err.message || 'Failed to create task');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalClose = () => {
@@ -90,8 +104,8 @@ export default function CreateTaskModal({ isOpen, onClose }) {
       notes: ''
     });
     setErrors({});
+    setApiError(null);
     setIsSubmitting(false);
-    setValidationSuccessNote(false);
     onClose?.();
   };
 
@@ -122,25 +136,17 @@ export default function CreateTaskModal({ isOpen, onClose }) {
               onClick={handleSubmit}
               isLoading={isSubmitting}
             >
-              Validate & Continue
+              Create Task
             </Button>
           </div>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Backend Integration Info Banner */}
-        <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] text-xs text-[#94A3B8] leading-relaxed flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-[#8B5CF6] shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Integration Status:</span>{' '}
-            Task creation will be connected to the backend in the next integration phase. Local validation is fully operational.
-          </div>
-        </div>
-
-        {validationSuccessNote && (
-          <div className="p-3 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2">
-            <span>Task form validated successfully. Awaiting database integration in next phase.</span>
+        {apiError && (
+          <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#F87171] flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
           </div>
         )}
 
@@ -164,38 +170,29 @@ export default function CreateTaskModal({ isOpen, onClose }) {
           disabled={isSubmitting}
         />
 
-        {/* Event & Assignee */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select
-            label="Linked Event"
-            options={eventOptions}
-            value={formData.event}
-            onChange={(e) => handleChange('event', e.target.value)}
-            disabled={isSubmitting}
-          />
-          <Select
-            label="Assignee"
-            options={assigneeOptions}
-            value={formData.assignee}
-            onChange={(e) => handleChange('assignee', e.target.value)}
-            disabled={isSubmitting}
-          />
-        </div>
+        {/* Event Association */}
+        <Select
+          label="Associated Event"
+          options={eventOptions}
+          value={formData.event}
+          onChange={(e) => handleChange('event', e.target.value)}
+          disabled={isSubmitting}
+        />
 
-        {/* Status & Priority */}
+        {/* Priority & Status */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select
-            label="Initial Status"
-            options={statusOptions}
-            value={formData.status}
-            onChange={(e) => handleChange('status', e.target.value)}
-            disabled={isSubmitting}
-          />
           <Select
             label="Priority Level"
-            options={priorityOptions}
+            options={taskPriorityOptions}
             value={formData.priority}
             onChange={(e) => handleChange('priority', e.target.value)}
+            disabled={isSubmitting}
+          />
+          <Select
+            label="Initial Status"
+            options={taskStatusOptions}
+            value={formData.status}
+            onChange={(e) => handleChange('status', e.target.value)}
             disabled={isSubmitting}
           />
         </div>
@@ -203,25 +200,25 @@ export default function CreateTaskModal({ isOpen, onClose }) {
         {/* Due Date & Time */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="Due Date"
             type="date"
+            label="Due Date"
             value={formData.dueDate}
             onChange={(e) => handleChange('dueDate', e.target.value)}
             disabled={isSubmitting}
           />
           <Input
-            label="Due Time"
             type="time"
+            label="Due Time"
             value={formData.dueTime}
             onChange={(e) => handleChange('dueTime', e.target.value)}
             disabled={isSubmitting}
           />
         </div>
 
-        {/* Additional Notes */}
+        {/* Notes */}
         <Textarea
-          label="Task Notes / Dependencies"
-          placeholder="Additional task notes or dependencies..."
+          label="Execution Notes"
+          placeholder="Sub-tasks, required credentials, venue keys..."
           rows={2}
           value={formData.notes}
           onChange={(e) => handleChange('notes', e.target.value)}

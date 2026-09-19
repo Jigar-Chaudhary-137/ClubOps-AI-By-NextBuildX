@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Sparkles, Calendar, MapPin, Users, FileText, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, FileText, Clock, AlertCircle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
+import { createEvent } from '../../services/api/events';
 
 const eventTypeOptions = [
   { value: 'Workshop', label: 'Workshop' },
@@ -24,7 +25,7 @@ const eventStatusOptions = [
   { value: 'Completed', label: 'Completed' }
 ];
 
-export default function CreateEventModal({ isOpen, onClose }) {
+export default function CreateEventModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -41,11 +42,10 @@ export default function CreateEventModal({ isOpen, onClose }) {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationSuccessNote, setValidationSuccessNote] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error for that field if exists
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: null }));
     }
@@ -77,21 +77,37 @@ export default function CreateEventModal({ isOpen, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate frontend validation completion
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setValidationSuccessNote(true);
+    setApiError(null);
 
-      setTimeout(() => {
-        setValidationSuccessNote(false);
-        handleModalClose();
-      }, 2000);
-    }, 600);
+    try {
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.type || 'Technical',
+        status: formData.status ? formData.status.toLowerCase() : 'planning',
+        startDate: formData.startDate ? new Date(`${formData.startDate}T${formData.startTime || '09:00'}`).toISOString() : null,
+        endDate: formData.endDate ? new Date(`${formData.endDate}T${formData.endTime || '18:00'}`).toISOString() : null,
+        location: formData.location.trim(),
+        venue: formData.location.trim(),
+      };
+
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        await createEvent(payload);
+      }
+      handleModalClose();
+    } catch (err) {
+      console.error('Failed to create event:', err);
+      setApiError(err.response?.data?.message || err.message || 'Failed to create event');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalClose = () => {
@@ -109,8 +125,8 @@ export default function CreateEventModal({ isOpen, onClose }) {
       notes: ''
     });
     setErrors({});
+    setApiError(null);
     setIsSubmitting(false);
-    setValidationSuccessNote(false);
     onClose?.();
   };
 
@@ -141,25 +157,17 @@ export default function CreateEventModal({ isOpen, onClose }) {
               onClick={handleSubmit}
               isLoading={isSubmitting}
             >
-              Validate & Continue
+              Create Event
             </Button>
           </div>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Backend Integration Info Banner */}
-        <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] text-xs text-[#94A3B8] leading-relaxed flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-[#8B5CF6] shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Integration Status:</span>{' '}
-            Event creation will be connected to the backend in the next integration phase. Local validation is fully operational.
-          </div>
-        </div>
-
-        {validationSuccessNote && (
-          <div className="p-3 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2">
-            <span>Form validated successfully. Awaiting database integration in next phase.</span>
+        {apiError && (
+          <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#F87171] flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
           </div>
         )}
 
@@ -204,16 +212,16 @@ export default function CreateEventModal({ isOpen, onClose }) {
         {/* Start Date & Time */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="Start Date *"
             type="date"
+            label="Start Date *"
             value={formData.startDate}
             onChange={(e) => handleChange('startDate', e.target.value)}
             error={errors.startDate}
             disabled={isSubmitting}
           />
           <Input
-            label="Start Time *"
             type="time"
+            label="Start Time *"
             value={formData.startTime}
             onChange={(e) => handleChange('startTime', e.target.value)}
             error={errors.startTime}
@@ -224,16 +232,16 @@ export default function CreateEventModal({ isOpen, onClose }) {
         {/* End Date & Time */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="End Date *"
             type="date"
+            label="End Date *"
             value={formData.endDate}
             onChange={(e) => handleChange('endDate', e.target.value)}
             error={errors.endDate}
             disabled={isSubmitting}
           />
           <Input
-            label="End Time *"
             type="time"
+            label="End Time *"
             value={formData.endTime}
             onChange={(e) => handleChange('endTime', e.target.value)}
             error={errors.endTime}
@@ -245,18 +253,15 @@ export default function CreateEventModal({ isOpen, onClose }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Location / Venue"
-            placeholder="e.g. Seminar Hall / Auditorium / Online"
-            leftIcon={<MapPin className="w-4 h-4" />}
+            placeholder="e.g. Auditorium / Main Hall"
             value={formData.location}
             onChange={(e) => handleChange('location', e.target.value)}
             disabled={isSubmitting}
           />
           <Input
-            label="Expected Volunteers"
             type="number"
-            min="0"
+            label="Target Volunteer Count"
             placeholder="e.g. 15"
-            leftIcon={<Users className="w-4 h-4" />}
             value={formData.expectedVolunteers}
             onChange={(e) => handleChange('expectedVolunteers', e.target.value)}
             disabled={isSubmitting}
@@ -265,8 +270,8 @@ export default function CreateEventModal({ isOpen, onClose }) {
 
         {/* Additional Planning Notes */}
         <Textarea
-          label="Planning Notes"
-          placeholder="Additional planning notes or internal reminders..."
+          label="Internal Planning Notes"
+          placeholder="Key sponsors, equipment requirements, special logistics..."
           rows={2}
           value={formData.notes}
           onChange={(e) => handleChange('notes', e.target.value)}

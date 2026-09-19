@@ -74,7 +74,7 @@ export default function AIMessageActions({ messageContent = '', onActionTrigger 
 
         {/* Operational Conversion Shortcuts */}
         <button
-          onClick={() => handleAction('create_task', 'Task creation from AI output will be connected when backend AI tools are wired.')}
+          onClick={() => handleAction('create_task', 'Creating task from AI output...')}
           className="p-1.5 rounded-lg bg-[#151D2E] hover:bg-indigo-600/20 text-indigo-300 border border-[#263247] hover:border-indigo-500/30 transition-all flex items-center space-x-1"
           title="Turn into Task"
         >
@@ -83,7 +83,7 @@ export default function AIMessageActions({ messageContent = '', onActionTrigger 
         </button>
 
         <button
-          onClick={() => handleAction('create_announcement', 'Announcement drafting from AI output will be connected when backend AI tools are wired.')}
+          onClick={() => handleAction('create_announcement', 'Creating announcement draft from AI output...')}
           className="p-1.5 rounded-lg bg-[#151D2E] hover:bg-purple-600/20 text-purple-300 border border-[#263247] hover:border-purple-500/30 transition-all flex items-center space-x-1"
           title="Turn into Announcement"
         >
@@ -92,7 +92,7 @@ export default function AIMessageActions({ messageContent = '', onActionTrigger 
         </button>
 
         <button
-          onClick={() => handleAction('add_risk', 'Risk logging from AI output will be connected when backend AI tools are wired.')}
+          onClick={() => handleAction('add_risk', 'Logging risk item from AI output...')}
           className="p-1.5 rounded-lg bg-[#151D2E] hover:bg-amber-600/20 text-amber-300 border border-[#263247] hover:border-amber-500/30 transition-all flex items-center space-x-1"
           title="Log as Risk"
         >
@@ -101,7 +101,7 @@ export default function AIMessageActions({ messageContent = '', onActionTrigger 
         </button>
 
         <button
-          onClick={() => handleAction('save_insight', 'Insight saving will be available once the backend persistence service is connected.')}
+          onClick={() => handleAction('save_insight', 'Saving insight to operational knowledge base...')}
           className="p-1.5 rounded-lg bg-[#151D2E] hover:bg-[#263247] hover:text-white border border-[#263247] transition-colors flex items-center space-x-1"
           title="Save Insight"
         >

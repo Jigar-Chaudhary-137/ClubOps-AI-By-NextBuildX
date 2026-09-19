@@ -14,7 +14,7 @@ export default function KnowledgeSearch({
   const handleSearch = (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
-    setNotice('Knowledge search will be available after document indexing and AI integration.');
+    setNotice('Searching club knowledge base...');
     setTimeout(() => setNotice(null), 4500);
     onSearch?.(query);
   };

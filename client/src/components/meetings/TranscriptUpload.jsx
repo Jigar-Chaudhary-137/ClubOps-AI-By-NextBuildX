@@ -15,7 +15,7 @@ export default function TranscriptUpload({
     if (!files || files.length === 0) return;
     const file = files[0];
     setSelectedFile(file);
-    setNotice('Transcript processing will be available after backend integration.');
+    setNotice('Transcript attached successfully and ready for processing.');
     onFileSelect?.(file);
   };
 

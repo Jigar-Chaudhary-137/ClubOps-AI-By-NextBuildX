@@ -50,26 +50,7 @@ export default function VolunteerDetailsPage() {
 
         <div className="flex items-center gap-2">
           <Badge variant="neutral">Volunteer ID: #{volunteerId}</Badge>
-          <Badge variant="primary" dot>Awaiting Integration</Badge>
         </div>
-      </div>
-
-      {/* Backend Integration Info Banner */}
-      <div className="p-3.5 rounded-xl bg-[#151D2E] border border-[#263247] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#94A3B8]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-white">Volunteer Profile Preview:</span>{' '}
-            Live volunteer record #{volunteerId} will be dynamically retrieved from the backend API in the upcoming integration phase.
-          </div>
-        </div>
-        <Link to="/ai">
-          <Button variant="ai" size="sm" leftIcon={<Sparkles className="w-3.5 h-3.5" />}>
-            AI Assignment Copilot
-          </Button>
-        </Link>
       </div>
 
       {/* Volunteer Header Profile Card */}
