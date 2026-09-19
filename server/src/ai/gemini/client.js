@@ -34,6 +34,13 @@ const cleanJsonString = (rawText) => {
   return cleaned.trim();
 };
 
+const withTimeout = (promise, ms = 2500) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('AI request timed out after ' + ms + 'ms')), ms))
+  ]);
+};
+
 /**
  * Sends a structured prompt to Google Gemini and returns parsed JSON.
  *
@@ -66,7 +73,7 @@ const generateStructured = async (prompt, options = {}) => {
 
     const model = ai.getGenerativeModel(modelParams);
 
-    const result = await model.generateContent(prompt);
+    const result = await withTimeout(model.generateContent(prompt), 8000);
     const response = await result.response;
     const text = response.text();
 

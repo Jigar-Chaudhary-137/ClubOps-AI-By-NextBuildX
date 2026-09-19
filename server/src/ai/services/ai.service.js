@@ -290,9 +290,9 @@ const applyMeetingActions = async (clubId, user, meetingId, { selectedActionIndi
 
       // Dispatch meeting_action notification to assignee
       if (assignedUserId) {
-        const notificationService = require('../../services/notification.service');
-        notificationService
-          .createNotification({
+        try {
+          const notificationService = require('../../services/notification.service');
+          await notificationService.createNotification({
             recipientId: assignedUserId,
             clubId,
             eventId: meeting.event || null,
@@ -304,8 +304,10 @@ const applyMeetingActions = async (clubId, user, meetingId, { selectedActionIndi
               meetingId: meeting._id.toString(),
               taskId: task._id.toString()
             }
-          })
-          .catch((err) => console.warn('[Meeting Action Notification Error]', err.message));
+          });
+        } catch (err) {
+          console.warn('[Meeting Action Notification Error]', err.message);
+        }
       }
 
       tasksCreated.push({

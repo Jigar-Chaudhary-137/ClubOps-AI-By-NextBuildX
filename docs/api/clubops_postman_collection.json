@@ -1,0 +1,728 @@
+{
+  "info": {
+    "_postman_id": "c1ab095a-6a42-4f32-8419-clubops-ai-ps3",
+    "name": "ClubOps AI — Complete API Collection (PS-3)",
+    "description": "Comprehensive Postman collection for ClubOps AI backend containing all REST APIs, RAG search, AI Agents, Real-Time SSE endpoints, and Multi-Channel broadcast simulators.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "clubId", "value": "", "type": "string" },
+    { "key": "eventId", "value": "", "type": "string" },
+    { "key": "taskId", "value": "", "type": "string" },
+    { "key": "volunteerId", "value": "", "type": "string" },
+    { "key": "meetingId", "value": "", "type": "string" },
+    { "key": "documentId", "value": "", "type": "string" },
+    { "key": "riskId", "value": "", "type": "string" },
+    { "key": "announcementId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 Authentication",
+      "item": [
+        {
+          "name": "Login (Organizer Lead)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && json.data && json.data.token) {",
+                  "    pm.collectionVariables.set('token', json.data.token);",
+                  "    if (json.data.user && json.data.user.club) {",
+                  "        pm.collectionVariables.set('clubId', json.data.user.club._id || json.data.user.club);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lead@club.edu\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Register New User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sarah Jenkins\",\n  \"email\": \"sarah.jenkins@club.edu\",\n  \"password\": \"Password123!\",\n  \"role\": \"volunteer\",\n  \"clubCode\": \"TECH2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Clubs",
+      "item": [
+        {
+          "name": "List All Active Clubs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/clubs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "clubs"]
+            }
+          }
+        },
+        {
+          "name": "Join Club with Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clubCode\": \"TECH2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/join-club",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "join-club"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Events",
+      "item": [
+        {
+          "name": "List Club Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('eventId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            }
+          }
+        },
+        {
+          "name": "Get Event Overview & Operational Metrics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/{{eventId}}/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "{{eventId}}", "overview"]
+            }
+          }
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Campus AI Summit 2026\",\n  \"description\": \"Annual collegiate machine learning and AI symposium\",\n  \"location\": \"Campus Innovation Hub\",\n  \"startDate\": \"2026-11-15T09:00:00.000Z\",\n  \"endDate\": \"2026-11-16T18:00:00.000Z\",\n  \"venue\": {\n    \"name\": \"Innovation Hall\",\n    \"capacity\": 250\n  },\n  \"budget\": {\n    \"allocated\": 3500,\n    \"currency\": \"USD\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Tasks",
+      "item": [
+        {
+          "name": "List Tasks with Event Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('taskId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks?event={{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"],
+              "query": [{ "key": "event", "value": "{{eventId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Create New Operational Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Verify Stage Projector & HDMI Handshake\",\n  \"description\": \"Run resolution tests on 4K projectors with workshop speakers\",\n  \"event\": \"{{eventId}}\",\n  \"priority\": \"high\",\n  \"status\": \"todo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"]
+            }
+          }
+        },
+        {
+          "name": "Update Task Status (Kanban Transition)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Volunteers",
+      "item": [
+        {
+          "name": "List Club Volunteers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('volunteerId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/volunteers?event={{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "volunteers"],
+              "query": [{ "key": "event", "value": "{{eventId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Update Volunteer Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability\": \"assigned\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/volunteers/{{volunteerId}}/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "volunteers", "{{volunteerId}}", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Meetings",
+      "item": [
+        {
+          "name": "List Club Meetings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('meetingId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/meetings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meetings"]
+            }
+          }
+        },
+        {
+          "name": "Create Meeting with Transcript",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Security & Logistics Review\",\n  \"event\": \"{{eventId}}\",\n  \"transcript\": \"Alex Vance: Rahul, please confirm badge printing by Thursday. Priya, ensure campus security is briefed on late night hackathon access.\",\n  \"scheduledAt\": \"2026-10-01T15:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/meetings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "meetings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Documents & RAG Knowledge Base",
+      "item": [
+        {
+          "name": "List Knowledge Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('documentId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "documents"]
+            }
+          }
+        },
+        {
+          "name": "Semantic Vector Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"reimbursement receipt submission deadline\",\n  \"topK\": 3,\n  \"threshold\": 0.1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/knowledge/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "knowledge", "search"]
+            }
+          }
+        },
+        {
+          "name": "Grounded RAG Knowledge Query with Citations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"What is our reimbursement policy for meals and expense limits?\",\n  \"topK\": 3,\n  \"threshold\": 0.1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/knowledge/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "knowledge", "query"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Risks",
+      "item": [
+        {
+          "name": "List Operational Risks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('riskId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/risks?event={{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "risks"],
+              "query": [{ "key": "event", "value": "{{eventId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Update Risk Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"mitigated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risks/{{riskId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "risks", "{{riskId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Announcements",
+      "item": [
+        {
+          "name": "List Announcements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('announcementId', json.data[0]._id || json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/announcements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "announcements"]
+            }
+          }
+        },
+        {
+          "name": "Multi-Channel Broadcast Dispatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channels\": [\"in_app\", \"email\", \"whatsapp\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/announcements/{{announcementId}}/broadcast",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "announcements", "{{announcementId}}", "broadcast"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Notifications & Real-Time SSE",
+      "item": [
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "List User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Live Real-Time SSE Stream (EventStream)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "stream"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 AI Workflows",
+      "item": [
+        {
+          "name": "AI Action Item Extraction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Alex: Rahul, finish the sponsor deck by Tuesday. Priya: Order catering for 300 students by Friday.\",\n  \"eventId\": \"{{eventId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/extract-actions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "extract-actions"]
+            }
+          }
+        },
+        {
+          "name": "AI Operational Risk Intelligence Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/analyze-risks/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "analyze-risks", "{{eventId}}"]
+            }
+          }
+        },
+        {
+          "name": "AI Announcement Drafter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"Hackathon Team Formation Mixer\",\n  \"targetAudience\": \"all\",\n  \"tone\": \"enthusiastic\",\n  \"keyPoints\": [\n    \"Friday 6 PM in Innovation Hall\",\n    \"Free pizza and drinks\",\n    \"Find teammates for AI track\"\n  ],\n  \"eventId\": \"{{eventId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/generate-announcement",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "generate-announcement"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Autonomous Operations Agent",
+      "item": [
+        {
+          "name": "Agent Chat — Dry Run (No Mutation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Create a high priority task for stage sound testing and assign to Rahul\",\n  \"eventId\": \"{{eventId}}\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/agent/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "agent", "chat"]
+            }
+          }
+        },
+        {
+          "name": "Agent Chat — Live Execution (Confirmed Mutation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Create a high priority task for stage sound testing and assign to Rahul\",\n  \"eventId\": \"{{eventId}}\",\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/agent/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "agent", "chat"]
+            }
+          }
+        },
+        {
+          "name": "Apply Meeting Actions to Task Board",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"selectedActionIndices\": [0, 1]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/meetings/{{meetingId}}/apply-actions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "meetings", "{{meetingId}}", "apply-actions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Health & Diagnostics",
+      "item": [
+        {
+          "name": "Basic Health Ping",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "Full Subsystem Diagnostics & Resource Usage",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health/full",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health", "full"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -98,13 +98,20 @@ Please provide a grounded, direct answer based strictly on the above sources:`;
 
   let answer = '';
 
+  const withTimeout = (promise, ms = 2500) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('RAG generation timed out after ' + ms + 'ms')), ms))
+    ]);
+  };
+
   try {
     const ai = getClient();
     const model = ai.getGenerativeModel({
       model: AI_MODELS.flash || 'gemini-1.5-flash',
       systemInstruction
     });
-    const result = await model.generateContent(userPrompt);
+    const result = await withTimeout(model.generateContent(userPrompt), 2500);
     const response = await result.response;
     const responseText = response.text();
     answer = responseText.trim();

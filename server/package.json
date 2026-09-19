@@ -5,7 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "demo": "node src/scripts/demo-walkthrough.js",
+    "benchmark": "node src/scripts/benchmark.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
