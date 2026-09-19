@@ -41,6 +41,14 @@ const createTask = async (clubId, userId, data) => {
       throw new AppError('Volunteer not found or does not belong to your club', 400);
     }
     volunteerId = data.volunteer;
+    if (!assignedUserId && volunteer.user) {
+      assignedUserId = volunteer.user;
+    }
+  } else if (assignedUserId) {
+    const existingVol = await Volunteer.findOne({ user: assignedUserId, club: clubId });
+    if (existingVol) {
+      volunteerId = existingVol._id;
+    }
   }
 
   const task = new Task({
@@ -178,8 +186,15 @@ const updateTask = async (clubId, taskId, data) => {
         throw new AppError('Assigned user must belong to your club', 400);
       }
       task.assignedTo = data.assignedTo;
+      if (data.volunteer === undefined) {
+        const matchingVol = await Volunteer.findOne({ user: data.assignedTo, club: clubId });
+        task.volunteer = matchingVol ? matchingVol._id : null;
+      }
     } else {
       task.assignedTo = null;
+      if (data.volunteer === undefined) {
+        task.volunteer = null;
+      }
     }
   }
 
@@ -191,6 +206,9 @@ const updateTask = async (clubId, taskId, data) => {
         throw new AppError('Volunteer not found or does not belong to your club', 400);
       }
       task.volunteer = data.volunteer;
+      if (data.assignedTo === undefined && volunteer.user) {
+        task.assignedTo = volunteer.user;
+      }
     } else {
       task.volunteer = null;
     }

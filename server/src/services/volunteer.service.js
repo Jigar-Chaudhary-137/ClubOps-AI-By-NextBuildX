@@ -1,6 +1,7 @@
 const Volunteer = require('../models/Volunteer');
 const User = require('../models/User');
 const Event = require('../models/Event');
+const Task = require('../models/Task');
 const { AppError } = require('../utils/errors');
 const { parsePagination, formatPagination, validateObjectId } = require('../utils/pagination');
 
@@ -77,6 +78,40 @@ const getVolunteers = async (clubId, query = {}) => {
     Volunteer.countDocuments(filter)
   ]);
 
+  // Dynamically derive workload (active tasks count) for each volunteer
+  if (volunteers.length > 0) {
+    const volunteerIds = volunteers.map((v) => v._id);
+    const userIds = volunteers.map((v) => v.user?._id || v.user).filter(Boolean);
+
+    const activeTasks = await Task.find({
+      club: clubId,
+      status: { $nin: ['completed', 'cancelled'] },
+      $or: [
+        { volunteer: { $in: volunteerIds } },
+        { assignedTo: { $in: userIds } }
+      ]
+    }).select('volunteer assignedTo').lean();
+
+    const volCountMap = new Map();
+    for (const t of activeTasks) {
+      if (t.volunteer) {
+        const vKey = t.volunteer.toString();
+        volCountMap.set(vKey, (volCountMap.get(vKey) || 0) + 1);
+      } else if (t.assignedTo) {
+        const uKey = t.assignedTo.toString();
+        const matchingVol = volunteers.find((v) => (v.user?._id || v.user)?.toString() === uKey);
+        if (matchingVol) {
+          const vKey = matchingVol._id.toString();
+          volCountMap.set(vKey, (volCountMap.get(vKey) || 0) + 1);
+        }
+      }
+    }
+
+    volunteers.forEach((v) => {
+      v.assignedTasksCount = volCountMap.get(v._id.toString()) || 0;
+    });
+  }
+
   return {
     volunteers,
     pagination: formatPagination(total, page, limit)
@@ -96,6 +131,17 @@ const getVolunteerById = async (clubId, volunteerId) => {
   if (!volunteer) {
     throw new AppError('Volunteer profile not found', 404);
   }
+
+  // Derive live active workload count
+  const activeCount = await Task.countDocuments({
+    club: clubId,
+    status: { $nin: ['completed', 'cancelled'] },
+    $or: [
+      { volunteer: volunteer._id },
+      { assignedTo: volunteer.user?._id || volunteer.user }
+    ]
+  });
+  volunteer.assignedTasksCount = activeCount;
 
   return volunteer;
 };

@@ -87,10 +87,69 @@ const analyzeEventOperationalRisks = async (clubId, event) => {
     existingRisks: opData.existingRisks
   });
 
-  const rawAiResult = await generateStructured(prompt, {
-    workflow: 'riskEngine',
-    systemInstruction: 'You are an objective, conservative risk analysis agent that identifies real operational bottlenecks based solely on provided facts.'
-  });
+  let rawAiResult;
+  try {
+    rawAiResult = await generateStructured(prompt, {
+      workflow: 'riskEngine',
+      systemInstruction: 'You are an objective, conservative risk analysis agent that identifies real operational bottlenecks based solely on provided facts.'
+    });
+  } catch (err) {
+    console.warn(`[Risk AI] Upstream Gemini failed (${err.message}). Analyzing deterministic operational facts.`);
+    const fallbackRisks = [];
+
+    if (opData.metrics.overdueTasks > 0) {
+      fallbackRisks.push({
+        title: 'Overdue Operational Tasks',
+        description: `${opData.metrics.overdueTasks} task(s) are past their designated deadline and remain incomplete.`,
+        severity: 'high',
+        probability: 'high',
+        mitigationPlan: 'Reassign overdue tasks or allocate additional volunteer support immediately.',
+        reasoning: 'Critical event milestones depend on timely task completion.'
+      });
+    }
+
+    if (opData.metrics.unassignedUrgentTasks > 0) {
+      fallbackRisks.push({
+        title: 'Unassigned High-Priority Tasks',
+        description: `${opData.metrics.unassignedUrgentTasks} urgent/high-priority task(s) have no designated owner.`,
+        severity: 'high',
+        probability: 'medium',
+        mitigationPlan: 'Review volunteer roster and assign department leads to unassigned tasks.',
+        reasoning: 'Unassigned urgent tasks cause last-minute operational failures.'
+      });
+    }
+
+    if (opData.volunteerSummary.availableVolunteers === 0 && opData.metrics.pendingTasks > 0) {
+      fallbackRisks.push({
+        title: 'Volunteer Capacity Constraint',
+        description: 'Zero volunteers are currently marked as available to take on pending tasks.',
+        severity: 'medium',
+        probability: 'medium',
+        mitigationPlan: 'Broadcast volunteer recruitment announcement to club members.',
+        reasoning: 'Active task backlog exceeds available volunteer capacity.'
+      });
+    }
+
+    // Include existing risks if none detected dynamically
+    if (fallbackRisks.length === 0 && opData.existingRisks.length > 0) {
+      for (const er of opData.existingRisks) {
+        fallbackRisks.push({
+          title: er.title,
+          description: er.description || 'Existing identified operational risk',
+          severity: er.severity || 'medium',
+          probability: 'medium',
+          mitigationPlan: 'Review ongoing mitigation measures with event lead.',
+          reasoning: 'Tracked in active risk log.'
+        });
+      }
+    }
+
+    rawAiResult = {
+      summary: `Automated assessment of ${opData.metrics.totalTasks} tasks and ${opData.volunteerSummary.totalVolunteers} volunteers.`,
+      overallRiskLevel: fallbackRisks.some((r) => r.severity === 'high') ? 'high' : 'medium',
+      risks: fallbackRisks
+    };
+  }
 
   const allowedSeverities = ['low', 'medium', 'high', 'critical'];
   const allowedProbabilities = ['low', 'medium', 'high'];

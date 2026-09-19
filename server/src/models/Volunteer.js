@@ -66,6 +66,10 @@ const volunteerSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant indexes
+volunteerSchema.index({ club: 1, user: 1 }, { unique: true });
+volunteerSchema.index({ club: 1, department: 1, availability: 1 });
+
 const Volunteer = mongoose.models.Volunteer || mongoose.model('Volunteer', volunteerSchema);
 
 module.exports = Volunteer;

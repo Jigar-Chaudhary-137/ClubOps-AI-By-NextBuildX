@@ -149,6 +149,83 @@ const normalizeExtractionResult = (aiRawOutput, clubMembers = []) => {
 };
 
 /**
+ * Deterministic fallback extractor for when upstream LLM is unreachable.
+ */
+const deterministicFallbackExtraction = (transcriptText, clubMembers) => {
+  const sentences = transcriptText
+    .split(/(?<=[.!?\n])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 5);
+
+  const actionKeywords = ['please', 'coordinate', 'prepare', 'finalize', 'submit', 'order', 'contact', 'schedule', 'arrange', 'test', 'setup', 'follow up'];
+  const actionItems = [];
+
+  for (const sentence of sentences) {
+    const lower = sentence.toLowerCase();
+    const hasAction = actionKeywords.some((kw) => lower.includes(kw));
+
+    if (hasAction) {
+      let assignedMember = null;
+      for (const m of clubMembers) {
+        if (!m.name) continue;
+        const fullName = m.name.toLowerCase();
+        const firstName = fullName.split(' ')[0];
+        if (lower.includes(fullName)) {
+          assignedMember = m.name;
+          break;
+        } else if (lower.includes(firstName)) {
+          const sharedFirst = clubMembers.filter((cm) => cm.name && cm.name.toLowerCase().split(' ')[0] === firstName);
+          if (sharedFirst.length > 1) {
+            assignedMember = m.name.split(' ')[0];
+          } else {
+            assignedMember = m.name;
+          }
+          break;
+        }
+      }
+
+      let deadlineText = null;
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'tomorrow', 'next week', 'tonight', 'eod'];
+      for (const d of days) {
+        if (lower.includes(d)) {
+          deadlineText = d.charAt(0).toUpperCase() + d.slice(1);
+          break;
+        }
+      }
+
+      let priority = 'medium';
+      if (lower.includes('urgent') || lower.includes('asap') || lower.includes('immediately')) {
+        priority = 'urgent';
+      } else if (lower.includes('important') || lower.includes('priority') || lower.includes('critical')) {
+        priority = 'high';
+      }
+
+      let title = sentence.replace(/^[A-Za-z\s]+:\s*/, '').trim();
+      if (title.length > 100) title = title.substring(0, 97) + '...';
+
+      actionItems.push({
+        title,
+        description: sentence,
+        assignedToName: assignedMember,
+        deadlineText,
+        priority,
+        confidence: 0.85
+      });
+    }
+  }
+
+  const keyDecisions = sentences
+    .filter((s) => s.toLowerCase().includes('decided') || s.toLowerCase().includes('agreed') || s.toLowerCase().includes('approved'))
+    .map((s) => s.replace(/^[A-Za-z\s]+:\s*/, '').trim());
+
+  return {
+    actionItems,
+    keyDecisions,
+    detectedRisks: []
+  };
+};
+
+/**
  * Orchestrates transcript extraction using Gemini and owner resolution.
  */
 const processTranscript = async ({ transcriptText, clubMembers = [], eventContext = null, referenceDate }) => {
@@ -159,10 +236,16 @@ const processTranscript = async ({ transcriptText, clubMembers = [], eventContex
     referenceDate
   });
 
-  const rawAiResult = await generateStructured(prompt, {
-    workflow: 'meetingProcessor',
-    systemInstruction: 'You are an accurate, deterministic meeting analyst that outputs pure JSON matching the requested schema without conversational filler.'
-  });
+  let rawAiResult;
+  try {
+    rawAiResult = await generateStructured(prompt, {
+      workflow: 'meetingProcessor',
+      systemInstruction: 'You are an accurate, deterministic meeting analyst that outputs pure JSON matching the requested schema without conversational filler.'
+    });
+  } catch (err) {
+    console.warn(`[Meeting AI] Upstream Gemini failed (${err.message}). Using deterministic rule-based extractor.`);
+    rawAiResult = deterministicFallbackExtraction(transcriptText, clubMembers);
+  }
 
   return normalizeExtractionResult(rawAiResult, clubMembers);
 };

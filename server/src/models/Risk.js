@@ -85,6 +85,9 @@ const riskSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant query index
+riskSchema.index({ club: 1, event: 1, severity: 1, status: 1 });
+
 const Risk = mongoose.models.Risk || mongoose.model('Risk', riskSchema);
 
 module.exports = Risk;

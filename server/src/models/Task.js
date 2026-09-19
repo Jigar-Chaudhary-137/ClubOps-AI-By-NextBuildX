@@ -89,6 +89,11 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant query indexes
+taskSchema.index({ club: 1, event: 1, status: 1 });
+taskSchema.index({ club: 1, assignedTo: 1, status: 1 });
+taskSchema.index({ club: 1, dueDate: 1 });
+
 const Task = mongoose.models.Task || mongoose.model('Task', taskSchema);
 
 module.exports = Task;

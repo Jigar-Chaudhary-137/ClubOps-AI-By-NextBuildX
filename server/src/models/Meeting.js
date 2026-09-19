@@ -91,6 +91,9 @@ const meetingSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant query index
+meetingSchema.index({ club: 1, event: 1, scheduledAt: -1 });
+
 const Meeting = mongoose.models.Meeting || mongoose.model('Meeting', meetingSchema);
 
 module.exports = Meeting;

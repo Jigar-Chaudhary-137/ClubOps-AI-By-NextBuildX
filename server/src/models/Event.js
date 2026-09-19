@@ -82,6 +82,10 @@ const eventSchema = new mongoose.Schema(
   }
 );
 
+// Multi-tenant query indexes
+eventSchema.index({ club: 1, startDate: 1, createdAt: -1 });
+eventSchema.index({ club: 1, status: 1 });
+
 const Event = mongoose.models.Event || mongoose.model('Event', eventSchema);
 
 module.exports = Event;
