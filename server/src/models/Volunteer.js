@@ -1,15 +1,68 @@
 const mongoose = require('mongoose');
 
-// Minimal placeholder schema - full domain schema will be defined in future stage
 const volunteerSchema = new mongoose.Schema(
   {
-    name: {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User reference is required'],
+      index: true
+    },
+    club: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Club',
+      required: [true, 'Club reference is required'],
+      index: true
+    },
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event',
+      default: null,
+      index: true
+    },
+    skills: {
+      type: [String],
+      default: []
+    },
+    department: {
       type: String,
-      required: false
+      default: 'General',
+      trim: true
+    },
+    availability: {
+      type: String,
+      enum: {
+        values: ['available', 'assigned', 'busy', 'unavailable'],
+        message: '{VALUE} is not a valid availability status'
+      },
+      default: 'available',
+      index: true
+    },
+    assignedTasksCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null
+    },
+    notes: {
+      type: String,
+      default: '',
+      trim: true
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+      transform(doc, ret) {
+        delete ret.__v;
+        return ret;
+      }
+    }
   }
 );
 
