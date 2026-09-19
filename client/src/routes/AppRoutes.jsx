@@ -21,6 +21,7 @@ import DocumentDetailsPage from '../pages/documents/DocumentDetailsPage';
 import RisksPage from '../pages/risks/RisksPage';
 import RiskDetailsPage from '../pages/risks/RiskDetailsPage';
 import AnnouncementsPage from '../pages/announcements/AnnouncementsPage';
+import AnnouncementDetailsPage from '../pages/announcements/AnnouncementDetailsPage';
 import AIAssistantPage from '../pages/ai/AIAssistantPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -51,6 +52,7 @@ export default function AppRoutes() {
         <Route path="/risks" element={<RisksPage />} />
         <Route path="/risks/:riskId" element={<RiskDetailsPage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/announcements/:announcementId" element={<AnnouncementDetailsPage />} />
         <Route path="/ai" element={<AIAssistantPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
