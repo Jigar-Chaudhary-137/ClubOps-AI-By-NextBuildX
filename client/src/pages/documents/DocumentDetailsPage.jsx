@@ -109,13 +109,8 @@ export default function DocumentDetailsPage() {
   }
 
   return (
-<<<<<<< HEAD
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
-      {/* Top Navigation & Breadcrumbs */}
-=======
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Top Navigation & Breadcrumb */}
->>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
       <div className="flex items-center justify-between gap-4">
         <Link
           to="/documents"
@@ -126,12 +121,8 @@ export default function DocumentDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
-          <Badge variant="neutral">ID: #{document._id?.substring(0, 8)}</Badge>
+          <Badge variant="neutral">ID: #{document._id ? document._id.substring(0, 8) : documentId}</Badge>
           <Badge variant="primary" dot>RAG Ready</Badge>
-=======
-          <Badge variant="neutral">ID: {documentId}</Badge>
->>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
         </div>
       </div>
 

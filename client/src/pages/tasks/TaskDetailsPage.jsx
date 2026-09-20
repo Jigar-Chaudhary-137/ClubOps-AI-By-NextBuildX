@@ -127,12 +127,8 @@ export default function TaskDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
-          <Badge variant="neutral">Task ID: #{task._id?.substring(0, 8)}</Badge>
+          <Badge variant="neutral">Task ID: #{task._id ? task._id.substring(0, 8) : taskId}</Badge>
           <Badge variant="primary" dot>MongoDB Connected</Badge>
-=======
-          <Badge variant="neutral">Task ID: #{taskId}</Badge>
->>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
         </div>
       </div>
 

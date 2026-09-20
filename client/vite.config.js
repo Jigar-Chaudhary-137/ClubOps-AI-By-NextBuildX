@@ -10,15 +10,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
-<<<<<<< HEAD
-        changeOrigin: true,
-      },
-    },
-  },
-=======
         changeOrigin: true
       }
     }
   }
->>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
 });
+
