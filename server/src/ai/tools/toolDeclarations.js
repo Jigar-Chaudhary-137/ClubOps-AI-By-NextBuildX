@@ -41,7 +41,7 @@ const toolDeclarations = [
           description: 'Due date in ISO-8601 format (e.g. YYYY-MM-DD).'
         }
       },
-      required: ['title', 'eventId']
+      required: ['title']
     }
   },
 
@@ -268,6 +268,139 @@ const toolDeclarations = [
         }
       },
       required: ['title', 'message']
+    }
+  },
+
+  // 11. List Events (Read-Only Workspace Tool)
+  {
+    name: 'list_events',
+    description: 'List upcoming, active, or past events for the authenticated club workspace.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        status: {
+          type: 'STRING',
+          enum: ['draft', 'planning', 'ready', 'active', 'completed', 'cancelled', 'all'],
+          description: 'Filter events by status (or "all").'
+        },
+        upcomingOnly: {
+          type: 'BOOLEAN',
+          description: 'If true, filters to events with startDate >= today or active/planning.'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of events to return (default 10).'
+        }
+      }
+    }
+  },
+
+  // 12. List Tasks (Read-Only Workspace Tool)
+  {
+    name: 'list_tasks',
+    description: 'Query operational tasks across the club workspace with status, priority, due dates, and assignees.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        status: {
+          type: 'STRING',
+          enum: ['todo', 'in_progress', 'review', 'completed', 'cancelled', 'pending'],
+          description: 'Filter tasks by status. "pending" returns incomplete tasks (todo, in_progress, review).'
+        },
+        priority: {
+          type: 'STRING',
+          enum: ['low', 'medium', 'high', 'urgent'],
+          description: 'Filter tasks by priority level.'
+        },
+        eventId: {
+          type: 'STRING',
+          description: 'Optional MongoDB ObjectId of the associated event.'
+        },
+        upcomingDeadlinesOnly: {
+          type: 'BOOLEAN',
+          description: 'If true, sorts by earliest upcoming due dates and excludes completed.'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of tasks to return (default 15).'
+        }
+      }
+    }
+  },
+
+  // 13. List Risks (Read-Only Workspace Tool)
+  {
+    name: 'list_risks',
+    description: 'Query operational hazards, bottlenecks, and risks recorded across club events.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        eventId: {
+          type: 'STRING',
+          description: 'Optional MongoDB ObjectId of the associated event.'
+        },
+        severity: {
+          type: 'STRING',
+          enum: ['low', 'medium', 'high', 'critical'],
+          description: 'Filter risks by severity rating.'
+        },
+        status: {
+          type: 'STRING',
+          enum: ['identified', 'mitigated', 'accepted', 'resolved'],
+          description: 'Filter risks by operational status.'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of risks to return (default 10).'
+        }
+      }
+    }
+  },
+
+  // 14. List Meetings (Read-Only Workspace Tool)
+  {
+    name: 'list_meetings',
+    description: 'Query club meetings, agendas, minutes, decisions, and extracted action items.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        eventId: {
+          type: 'STRING',
+          description: 'Optional MongoDB ObjectId of the associated event.'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of meetings to return (default 5).'
+        }
+      }
+    }
+  },
+
+  // 15. List Volunteers (Read-Only Workspace Tool)
+  {
+    name: 'list_volunteers',
+    description: 'Query club volunteers, their assigned department, availability, skills, and current task workload.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        department: {
+          type: 'STRING',
+          description: 'Filter volunteers by department (e.g. Logistics, Technical, Design).'
+        },
+        availability: {
+          type: 'STRING',
+          enum: ['available', 'assigned', 'busy', 'unavailable'],
+          description: 'Filter volunteers by availability status.'
+        },
+        sortByWorkload: {
+          type: 'BOOLEAN',
+          description: 'If true, sorts volunteers by highest assigned task workload first.'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of volunteers to return (default 15).'
+        }
+      }
     }
   }
 ];

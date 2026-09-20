@@ -67,6 +67,36 @@ const TOOL_REGISTRY = {
     executor: toolExecutors.broadcast_announcement,
     mutatesData: true,
     requiresConfirmation: true
+  },
+  list_events: {
+    declaration: toolDeclarations.find((t) => t.name === 'list_events'),
+    executor: toolExecutors.list_events,
+    mutatesData: false,
+    requiresConfirmation: false
+  },
+  list_tasks: {
+    declaration: toolDeclarations.find((t) => t.name === 'list_tasks'),
+    executor: toolExecutors.list_tasks,
+    mutatesData: false,
+    requiresConfirmation: false
+  },
+  list_risks: {
+    declaration: toolDeclarations.find((t) => t.name === 'list_risks'),
+    executor: toolExecutors.list_risks,
+    mutatesData: false,
+    requiresConfirmation: false
+  },
+  list_meetings: {
+    declaration: toolDeclarations.find((t) => t.name === 'list_meetings'),
+    executor: toolExecutors.list_meetings,
+    mutatesData: false,
+    requiresConfirmation: false
+  },
+  list_volunteers: {
+    declaration: toolDeclarations.find((t) => t.name === 'list_volunteers'),
+    executor: toolExecutors.list_volunteers,
+    mutatesData: false,
+    requiresConfirmation: false
   }
 };
 

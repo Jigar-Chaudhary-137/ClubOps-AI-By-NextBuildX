@@ -16,10 +16,9 @@ export default function AIActionCard({
   const [notice, setNotice] = useState(null);
 
   const handleExecute = () => {
-    setNotice('AI actions will be enabled after the AI tools and backend services are connected.');
-    setTimeout(() => {
-      setNotice(null);
-    }, 6000);
+    if (onReview) {
+      onReview(action);
+    }
   };
 
   return (

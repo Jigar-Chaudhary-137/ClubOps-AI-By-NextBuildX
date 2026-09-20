@@ -95,16 +95,25 @@ const generateEmbedding = async (text) => {
   try {
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
     const embeddingModel = genAI.getGenerativeModel({ model: modelName });
-    const result = await embeddingModel.embedContent(text);
+    
+    // Support outputDimensionality for models like gemini-embedding-001
+    const requestPayload = modelName === 'gemini-embedding-001'
+      ? { content: { parts: [{ text }] }, outputDimensionality: expectedDim }
+      : text;
+
+    const result = await embeddingModel.embedContent(requestPayload);
 
     if (result && result.embedding && Array.isArray(result.embedding.values)) {
       const vector = result.embedding.values;
       if (validateEmbeddingVector(vector, expectedDim)) {
         return vector;
       }
-      // If dimension differs but is valid numeric array
+      // If dimension differs but is valid numeric array, slice or pad to expectedDim
       if (Array.isArray(vector) && vector.length > 0 && !vector.some(isNaN)) {
-        return vector;
+        if (vector.length >= expectedDim) {
+          return vector.slice(0, expectedDim);
+        }
+        return [...vector, ...new Array(expectedDim - vector.length).fill(0)];
       }
     }
   } catch (err) {

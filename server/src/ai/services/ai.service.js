@@ -231,17 +231,24 @@ const generateAnnouncement = async (clubId, { eventId, topic, targetAudience = '
 /**
  * 6. AI Operations Agent Chat with Function Calling & Tool Execution
  */
-const chatWithAgent = async (clubId, user, { message, eventId = null, dryRun = false, chatHistory = [] }) => {
+const chatWithAgent = async (clubId, user, payload = {}) => {
+  const message = payload.message || payload.text;
   if (!message || !message.trim()) {
     throw new AppError('User message is required', 400);
   }
+
+  const chatHistory = payload.chatHistory || payload.history || [];
+  const eventId = payload.eventId || payload.context?.eventId || null;
+  const dryRun = payload.dryRun !== undefined
+    ? Boolean(payload.dryRun)
+    : (payload.context?.dryRun !== undefined ? Boolean(payload.context.dryRun) : false);
 
   return runOperationsAgent({
     user,
     clubId,
     message: message.trim(),
     eventId,
-    dryRun: Boolean(dryRun),
+    dryRun,
     chatHistory
   });
 };

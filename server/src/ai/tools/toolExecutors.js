@@ -6,6 +6,9 @@ const volunteerService = require('../../services/volunteer.service');
 const User = require('../../models/User');
 const Event = require('../../models/Event');
 const Task = require('../../models/Task');
+const Risk = require('../../models/Risk');
+const Meeting = require('../../models/Meeting');
+const Volunteer = require('../../models/Volunteer');
 const { resolveMemberOwner } = require('../extraction/meetingProcessor');
 const { validateObjectId } = require('../../utils/pagination');
 const { AppError } = require('../../utils/errors');
@@ -58,17 +61,27 @@ const toolExecutors = {
   // 1. Create Task Executor
   create_task: async (args, context) => {
     const { clubId, user, dryRun } = context;
-    validateObjectId(args.eventId, 'event ID');
+    let resolvedEvent = null;
 
-    // Verify event belongs to club
-    const event = await Event.findOne({ _id: args.eventId, club: clubId });
-    if (!event) {
-      return {
-        tool: 'create_task',
-        success: false,
-        error: { code: 'EVENT_NOT_FOUND', message: 'Event not found or does not belong to your club' }
-      };
+    if (args.eventId) {
+      if (/^[0-9a-fA-F]{24}$/.test(args.eventId)) {
+        resolvedEvent = await Event.findOne({ _id: args.eventId, club: clubId });
+      } else {
+        // Match by title
+        resolvedEvent = await Event.findOne({ club: clubId, title: new RegExp(args.eventId, 'i') });
+      }
+    } else if (args.title) {
+      // Check if task title mentions an existing event name in this club
+      const clubEvents = await Event.find({ club: clubId }).select('_id title').lean();
+      for (const ev of clubEvents) {
+        if (args.title.toLowerCase().includes(ev.title.toLowerCase().split(' ')[0])) {
+          resolvedEvent = ev;
+          break;
+        }
+      }
     }
+
+    const eventId = resolvedEvent ? resolvedEvent._id : null;
 
     let assignedUserId = null;
     let resolvedName = null;
@@ -94,7 +107,7 @@ const toolExecutors = {
             description: args.description || '',
             priority: args.priority || 'medium',
             assignedTo: resolvedName || 'Unassigned',
-            eventId: args.eventId,
+            eventId: eventId ? eventId.toString() : null,
             dueDate: args.dueDate || null
           }
         }
@@ -107,7 +120,7 @@ const toolExecutors = {
         description: args.description,
         priority: args.priority || 'medium',
         assignedTo: assignedUserId,
-        event: args.eventId,
+        event: eventId,
         dueDate: args.dueDate || null
       });
 
@@ -570,6 +583,282 @@ const toolExecutors = {
   // Alias for broadcast_announcement
   broadcast_announcement: async (args, context) => {
     return toolExecutors.send_broadcast_alert(args, context);
+  },
+
+  // 11. List Events Executor (Read-Only Workspace Tool)
+  list_events: async (args = {}, context) => {
+    const { clubId } = context;
+    try {
+      const query = { club: clubId };
+      if (args.status && args.status !== 'all') {
+        query.status = args.status;
+      }
+      if (args.upcomingOnly) {
+        // Events starting today onwards, or active/planning events
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        query.$or = [
+          { startDate: { $gte: startOfToday } },
+          { status: { $in: ['planning', 'ready', 'active'] } }
+        ];
+      }
+
+      const limit = Math.min(parseInt(args.limit, 10) || 10, 25);
+      const events = await Event.find(query)
+        .select('_id title description status startDate endDate location venue category leadOrganizer budget')
+        .sort({ startDate: 1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      return {
+        tool: 'list_events',
+        success: true,
+        count: events.length,
+        events: events.map((ev) => ({
+          _id: ev._id.toString(),
+          title: ev.title,
+          description: ev.description || '',
+          status: ev.status,
+          startDate: ev.startDate ? new Date(ev.startDate).toISOString() : null,
+          endDate: ev.endDate ? new Date(ev.endDate).toISOString() : null,
+          location: ev.location || (ev.venue?.name ? ev.venue.name : 'TBD'),
+          category: ev.category || 'General',
+          budget: ev.budget || null
+        }))
+      };
+    } catch (err) {
+      return {
+        tool: 'list_events',
+        success: false,
+        error: { code: 'LIST_EVENTS_FAILED', message: err.message }
+      };
+    }
+  },
+
+  // 12. List Tasks Executor (Read-Only Workspace Tool)
+  list_tasks: async (args = {}, context) => {
+    const { clubId } = context;
+    try {
+      const query = { club: clubId };
+
+      if (args.status) {
+        if (args.status === 'pending') {
+          query.status = { $in: ['todo', 'in_progress', 'review'] };
+        } else {
+          query.status = args.status;
+        }
+      }
+
+      if (args.priority) {
+        query.priority = args.priority;
+      }
+
+      if (args.eventId) {
+        validateObjectId(args.eventId, 'event ID');
+        query.event = args.eventId;
+      }
+
+      if (args.upcomingDeadlinesOnly) {
+        query.status = { $ne: 'completed' };
+        query.dueDate = { $ne: null };
+      }
+
+      const limit = Math.min(parseInt(args.limit, 10) || 15, 50);
+      const sort = args.upcomingDeadlinesOnly ? { dueDate: 1 } : { priority: -1, dueDate: 1, createdAt: -1 };
+
+      const tasks = await Task.find(query)
+        .populate('assignedTo', '_id name email role')
+        .populate('event', '_id title startDate')
+        .sort(sort)
+        .limit(limit)
+        .lean();
+
+      return {
+        tool: 'list_tasks',
+        success: true,
+        count: tasks.length,
+        tasks: tasks.map((t) => ({
+          _id: t._id.toString(),
+          title: t.title,
+          description: t.description || '',
+          status: t.status,
+          priority: t.priority,
+          dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : null,
+          event: t.event ? { _id: t.event._id.toString(), title: t.event.title } : null,
+          assignedTo: t.assignedTo ? { _id: t.assignedTo._id.toString(), name: t.assignedTo.name, role: t.assignedTo.role } : null
+        }))
+      };
+    } catch (err) {
+      return {
+        tool: 'list_tasks',
+        success: false,
+        error: { code: 'LIST_TASKS_FAILED', message: err.message }
+      };
+    }
+  },
+
+  // 13. List Risks Executor (Read-Only Workspace Tool)
+  list_risks: async (args = {}, context) => {
+    const { clubId } = context;
+    try {
+      const query = { club: clubId };
+
+      if (args.eventId) {
+        validateObjectId(args.eventId, 'event ID');
+        query.event = args.eventId;
+      }
+
+      if (args.severity) {
+        query.severity = args.severity;
+      }
+
+      if (args.status) {
+        query.status = args.status;
+      }
+
+      const limit = Math.min(parseInt(args.limit, 10) || 10, 25);
+      const risks = await Risk.find(query)
+        .populate('event', '_id title')
+        .sort({ severity: -1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      return {
+        tool: 'list_risks',
+        success: true,
+        count: risks.length,
+        risks: risks.map((r) => ({
+          _id: r._id.toString(),
+          title: r.title,
+          description: r.description || '',
+          severity: r.severity,
+          probability: r.probability || 'medium',
+          status: r.status,
+          mitigationPlan: r.mitigationPlan || '',
+          event: r.event ? { _id: r.event._id.toString(), title: r.event.title } : null
+        }))
+      };
+    } catch (err) {
+      return {
+        tool: 'list_risks',
+        success: false,
+        error: { code: 'LIST_RISKS_FAILED', message: err.message }
+      };
+    }
+  },
+
+  // 14. List Meetings Executor (Read-Only Workspace Tool)
+  list_meetings: async (args = {}, context) => {
+    const { clubId } = context;
+    try {
+      const query = { club: clubId };
+
+      if (args.eventId) {
+        validateObjectId(args.eventId, 'event ID');
+        query.event = args.eventId;
+      }
+
+      const limit = Math.min(parseInt(args.limit, 10) || 5, 20);
+      const meetings = await Meeting.find(query)
+        .populate('event', '_id title')
+        .sort({ scheduledAt: -1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      return {
+        tool: 'list_meetings',
+        success: true,
+        count: meetings.length,
+        meetings: meetings.map((m) => ({
+          _id: m._id.toString(),
+          title: m.title,
+          type: m.type || 'Planning',
+          scheduledAt: m.scheduledAt ? new Date(m.scheduledAt).toISOString() : null,
+          agenda: m.agenda || [],
+          notes: m.notes ? m.notes.slice(0, 500) : '',
+          extractedItems: Array.isArray(m.extractedItems) ? m.extractedItems.map((item) => ({
+            title: item.title,
+            assignedTo: item.assignedTo,
+            deadline: item.deadline,
+            priority: item.priority,
+            applied: item.applied
+          })) : [],
+          event: m.event ? { _id: m.event._id.toString(), title: m.event.title } : null
+        }))
+      };
+    } catch (err) {
+      return {
+        tool: 'list_meetings',
+        success: false,
+        error: { code: 'LIST_MEETINGS_FAILED', message: err.message }
+      };
+    }
+  },
+
+  // 15. List Volunteers Executor (Read-Only Workspace Tool)
+  list_volunteers: async (args = {}, context) => {
+    const { clubId } = context;
+    try {
+      const query = { club: clubId };
+
+      if (args.department) {
+        query.department = new RegExp(args.department, 'i');
+      }
+
+      if (args.availability) {
+        query.availability = args.availability;
+      }
+
+      const limit = Math.min(parseInt(args.limit, 10) || 15, 50);
+      const volunteers = await Volunteer.find(query)
+        .populate('user', '_id name email role')
+        .populate('event', '_id title')
+        .lean();
+
+      // Aggregate live active task counts per assigned user in this club
+      const activeTasksAggregation = await Task.aggregate([
+        { $match: { club: clubId, status: { $in: ['todo', 'in_progress', 'review'] }, assignedTo: { $ne: null } } },
+        { $group: { _id: '$assignedTo', activeCount: { $sum: 1 } } }
+      ]);
+      const taskCountMap = {};
+      activeTasksAggregation.forEach((entry) => {
+        taskCountMap[entry._id.toString()] = entry.activeCount;
+      });
+
+      const enriched = volunteers.map((v) => {
+        const userIdStr = v.user?._id?.toString();
+        const liveActiveTasks = userIdStr && taskCountMap[userIdStr] ? taskCountMap[userIdStr] : 0;
+        const totalWorkload = Math.max(v.assignedTasksCount || 0, liveActiveTasks);
+
+        return {
+          _id: v._id.toString(),
+          user: v.user ? { _id: v.user._id.toString(), name: v.user.name, email: v.user.email, role: v.user.role } : null,
+          department: v.department || 'General',
+          availability: v.availability || 'available',
+          skills: v.skills || [],
+          assignedTasksCount: totalWorkload,
+          activeTasksCount: liveActiveTasks,
+          event: v.event ? { _id: v.event._id.toString(), title: v.event.title } : null
+        };
+      });
+
+      if (args.sortByWorkload) {
+        enriched.sort((a, b) => b.assignedTasksCount - a.assignedTasksCount);
+      }
+
+      return {
+        tool: 'list_volunteers',
+        success: true,
+        count: enriched.slice(0, limit).length,
+        volunteers: enriched.slice(0, limit)
+      };
+    } catch (err) {
+      return {
+        tool: 'list_volunteers',
+        success: false,
+        error: { code: 'LIST_VOLUNTEERS_FAILED', message: err.message }
+      };
+    }
   }
 };
 
