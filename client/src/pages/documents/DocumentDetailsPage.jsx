@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   FileText,
@@ -7,11 +7,12 @@ import {
   Tag,
   HardDrive,
   Eye,
-  Edit,
-  MoreVertical,
+  Trash2,
   AlertCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  CheckCircle2
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -19,22 +20,96 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import {
   DocumentProcessingBadge,
   KnowledgeStatusBadge,
-  DocumentPreview,
-  DocumentKnowledgePanel,
-  DocumentQuickActions,
-  DocumentActivity,
   UploadDocumentModal
 } from '../../components/documents';
+import { getDocumentById, deleteDocument, addToKnowledge, removeFromKnowledge } from '../../services/api/documents';
 
 export default function DocumentDetailsPage() {
   const { documentId } = useParams();
+  const navigate = useNavigate();
+  const [document, setDocument] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [updatingKnowledge, setUpdatingKnowledge] = useState(false);
 
-  // Backend integration placeholder
-  const document = null;
+  useEffect(() => {
+    async function loadDoc() {
+      if (!documentId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getDocumentById(documentId);
+        if (res?.data) {
+          setDocument(res.data);
+        }
+      } catch (err) {
+        console.error('Error fetching document details:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load document');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDoc();
+  }, [documentId]);
+
+  const handleToggleKnowledge = async () => {
+    try {
+      setUpdatingKnowledge(true);
+      if (document.isKnowledgeBase) {
+        await removeFromKnowledge(documentId);
+        setDocument(prev => ({ ...prev, isKnowledgeBase: false }));
+      } else {
+        await addToKnowledge(documentId);
+        setDocument(prev => ({ ...prev, isKnowledgeBase: true }));
+      }
+    } catch (err) {
+      console.error('Failed to update knowledge status:', err);
+    } finally {
+      setUpdatingKnowledge(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this document from the knowledge base?')) return;
+    try {
+      await deleteDocument(documentId);
+      navigate('/documents');
+    } catch (err) {
+      console.error('Failed to delete document:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-400">Loading document metadata and RAG index...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !document) {
+    return (
+      <div className="max-w-4xl mx-auto py-10 space-y-4">
+        <Link to="/documents" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white">
+          <ArrowLeft className="w-4 h-4" /> Back to Club Knowledge
+        </Link>
+        <Card className="border-rose-500/30 bg-rose-500/10">
+          <CardContent className="p-6 text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
+            <h3 className="text-base font-semibold text-white">Document Not Found</h3>
+            <p className="text-xs text-rose-200">{error || 'The requested document record does not exist.'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
       {/* Top Navigation & Breadcrumbs */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -46,26 +121,9 @@ export default function DocumentDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Badge variant="neutral">ID: {documentId}</Badge>
-          <Badge variant="primary" dot>Awaiting Integration</Badge>
+          <Badge variant="neutral">ID: #{document._id?.substring(0, 8)}</Badge>
+          <Badge variant="primary" dot>RAG Ready</Badge>
         </div>
-      </div>
-
-      {/* Backend Integration Info Banner */}
-      <div className="p-3.5 rounded-xl bg-[#151D2E] border border-[#263247] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#94A3B8]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-white">Document Knowledge Workspace:</span>{' '}
-            Document #{documentId} metadata, chunking, and vector index status will be dynamically loaded in the next backend integration phase.
-          </div>
-        </div>
-
-        <span className="text-[11px] font-mono text-[#64748B]">
-          Frontend Phase 7
-        </span>
       </div>
 
       {/* Header Card */}
@@ -74,41 +132,44 @@ export default function DocumentDetailsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2.5">
               <div className="flex flex-wrap items-center gap-2.5">
-                <DocumentProcessingBadge status="Not Processed" size="sm" />
+                <DocumentProcessingBadge status={document.processed ? 'Processed' : 'Ready'} size="sm" />
                 <span className="text-xs text-[#64748B]">•</span>
-                <KnowledgeStatusBadge status="Not Added" size="sm" />
+                <KnowledgeStatusBadge status={document.isKnowledgeBase ? 'In Knowledge Base' : 'General File'} size="sm" />
                 <span className="text-xs text-[#64748B]">•</span>
                 <span className="inline-flex items-center gap-1 text-xs text-[#94A3B8]">
                   <Tag className="w-3.5 h-3.5 text-[#818CF8]" />
-                  <span>File Type: —</span>
+                  <span>Category: {document.category || 'General'}</span>
                 </span>
               </div>
 
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                —
+                {document.title || document.filename}
               </h1>
 
-              <p className="text-xs text-[#94A3B8]">
-                Document information will appear once connected.
+              <p className="text-xs sm:text-sm text-[#94A3B8] max-w-2xl leading-relaxed">
+                {document.description || 'Uploaded file indexed into the ClubOps AI knowledge base for RAG context extraction.'}
               </p>
             </div>
 
             {/* Header Right Actions */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
               <Button
-                variant="secondary"
+                variant={document.isKnowledgeBase ? 'secondary' : 'primary'}
                 size="sm"
-                onClick={() => setIsEditModalOpen(true)}
-                leftIcon={<Edit className="w-3.5 h-3.5" />}
+                leftIcon={<BookOpen className="w-3.5 h-3.5" />}
+                disabled={updatingKnowledge}
+                onClick={handleToggleKnowledge}
               >
-                Edit
+                {document.isKnowledgeBase ? 'Remove from RAG' : 'Include in RAG'}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                aria-label="More actions"
+                className="text-rose-400 hover:text-rose-300 hover:border-rose-500/40"
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                onClick={handleDelete}
               >
-                <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
+                Delete
               </Button>
             </div>
           </div>
@@ -118,89 +179,52 @@ export default function DocumentDetailsPage() {
       {/* Document Overview Section */}
       <Card className="border-[#263247] bg-[#151D2E]">
         <CardHeader className="pb-3 border-b border-[#263247]/60">
-          <CardTitle className="text-sm">Document Overview</CardTitle>
+          <CardTitle className="text-sm">Document Overview & Vector Indexing</CardTitle>
         </CardHeader>
         <CardContent className="p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
               <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
                 <FileText className="w-3.5 h-3.5 text-[#818CF8]" />
-                <span>File Type & Size</span>
+                <span>File Size</span>
               </div>
-              <p className="text-sm font-semibold text-white font-mono">—</p>
+              <p className="text-sm font-semibold text-white font-mono">
+                {document.fileSize ? `${(document.fileSize / 1024).toFixed(1)} KB` : 'N/A'}
+              </p>
             </div>
 
             <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
               <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
                 <Tag className="w-3.5 h-3.5 text-[#818CF8]" />
-                <span>Category</span>
+                <span>Vector Chunks</span>
               </div>
-              <p className="text-sm font-semibold text-white">—</p>
+              <p className="text-sm font-semibold text-white font-mono">
+                {document.chunks?.length ?? (document.chunkCount || 1)} Chunks
+              </p>
             </div>
 
             <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
               <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
                 <Eye className="w-3.5 h-3.5 text-[#818CF8]" />
-                <span>Visibility</span>
+                <span>RAG Status</span>
               </div>
-              <p className="text-sm font-semibold text-white">—</p>
+              <p className="text-sm font-semibold text-emerald-400">
+                {document.isKnowledgeBase ? 'Active in RAG' : 'Not Indexed'}
+              </p>
             </div>
 
             <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
               <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
                 <Calendar className="w-3.5 h-3.5 text-[#818CF8]" />
-                <span>Uploaded Date</span>
+                <span>Uploaded</span>
               </div>
-              <p className="text-sm font-semibold text-white font-mono">—</p>
+              <p className="text-sm font-semibold text-white font-mono">
+                {document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'Recently'}
+              </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
-              <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
-                <Clock className="w-3.5 h-3.5 text-[#818CF8]" />
-                <span>Last Updated</span>
-              </div>
-              <p className="text-sm font-semibold text-white font-mono">—</p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
-              <div className="flex items-center gap-2 text-xs text-[#94A3B8] mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
-                <span>Knowledge Status</span>
-              </div>
-              <p className="text-sm font-semibold text-white">—</p>
-            </div>
-          </div>
-
-          {/* Description & Empty Note */}
-          <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] space-y-1.5">
-            <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-              Description
-            </h4>
-            <p className="text-xs text-[#94A3B8] italic">
-              Document information will appear once connected.
-            </p>
           </div>
         </CardContent>
       </Card>
-
-      {/* Main Workspace Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left / Main Column: Preview & Knowledge Panel (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          <DocumentPreview />
-          <DocumentKnowledgePanel />
-        </div>
-
-        {/* Right / Secondary Column: Actions & Activity (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <DocumentQuickActions
-            onUploadDocument={() => setIsEditModalOpen(true)}
-          />
-          <DocumentActivity />
-        </div>
-      </div>
 
       {/* Upload/Edit Modal */}
       <UploadDocumentModal

@@ -3,8 +3,20 @@ const path = require('path');
 const config = require('../config/env');
 const { AppError } = require('../utils/errors');
 
-// Allowed extensions and MIME types
-const ALLOWED_EXTENSIONS = new Set(['.pdf', '.txt', '.md', '.docx', '.json']);
+// Allowed extensions and MIME types including scanned images and vision formats
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf',
+  '.txt',
+  '.md',
+  '.docx',
+  '.doc',
+  '.json',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp'
+]);
+
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'text/plain',
@@ -13,7 +25,11 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
   'application/json',
-  'application/octet-stream' // checked with extension
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'application/octet-stream' // checked in tandem with file extension
 ]);
 
 // Memory storage for fast parsing and zero disk-leakage
@@ -26,7 +42,7 @@ const fileFilter = (req, file, cb) => {
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     return cb(
       new AppError(
-        `Unsupported file extension "${ext}". Allowed types: .pdf, .txt, .md, .docx, .json`,
+        `Unsupported file extension "${ext}". Allowed types: .pdf, .png, .jpg, .jpeg, .webp, .txt, .md, .docx, .json`,
         400
       ),
       false
@@ -36,7 +52,7 @@ const fileFilter = (req, file, cb) => {
   if (mime && !ALLOWED_MIME_TYPES.has(mime) && !ALLOWED_EXTENSIONS.has(ext)) {
     return cb(
       new AppError(
-        `Unsupported MIME type "${mime}". Allowed types: PDF, Text, Markdown, Word, JSON`,
+        `Unsupported MIME type "${mime}". Allowed types: PDF, Images (PNG, JPEG, WEBP), Text, Markdown, Word, JSON`,
         400
       ),
       false
@@ -46,7 +62,7 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const maxSizeBytes = (config.maxDocumentSizeMb || 10) * 1024 * 1024;
+const maxSizeBytes = (config.maxDocumentSizeMb || 15) * 1024 * 1024;
 
 const upload = multer({
   storage,
@@ -65,7 +81,7 @@ const handleDocumentUpload = (req, res, next) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return next(
-          new AppError(`File exceeds maximum size limit of ${config.maxDocumentSizeMb || 10}MB`, 400)
+          new AppError(`File exceeds maximum size limit of ${config.maxDocumentSizeMb || 15}MB`, 400)
         );
       }
       return next(new AppError(`Upload error: ${err.message}`, 400));
@@ -80,5 +96,6 @@ const handleDocumentUpload = (req, res, next) => {
 module.exports = {
   upload,
   handleDocumentUpload,
-  ALLOWED_EXTENSIONS
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES
 };

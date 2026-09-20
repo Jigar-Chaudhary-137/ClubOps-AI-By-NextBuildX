@@ -60,6 +60,16 @@ const documentSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    // Stage: Scanned Image-Only PDF & Document OCR Metadata
+    isOcrProcessed: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    ocrEngine: {
+      type: String,
+      default: null
+    },
     // Stage 6: RAG Knowledge Base & Chunk Embeddings
     chunks: [
       {
@@ -153,6 +163,7 @@ const documentSchema = new mongoose.Schema(
 // Multi-tenant compound index for fast RAG candidate retrieval
 documentSchema.index({ club: 1, isKnowledgeBase: 1, ingestionStatus: 1 });
 documentSchema.index({ club: 1, event: 1, isKnowledgeBase: 1, ingestionStatus: 1 });
+documentSchema.index({ club: 1, isOcrProcessed: 1 });
 
 const Document = mongoose.models.Document || mongoose.model('Document', documentSchema);
 

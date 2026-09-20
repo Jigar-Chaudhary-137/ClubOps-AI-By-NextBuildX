@@ -8,7 +8,7 @@ const { chunkDocument } = require('../ai/rag/chunker');
 const { generateEmbeddingsBatch } = require('../ai/rag/embeddings');
 
 /**
- * Uploads a physical file, parses content, chunks, generates embeddings, and saves.
+ * Uploads a physical file, parses content (with auto Vision OCR fallback), chunks, generates embeddings, and saves.
  */
 const uploadDocument = async (clubId, userId, file, data = {}) => {
   if (!file || !file.buffer) {
@@ -27,7 +27,7 @@ const uploadDocument = async (clubId, userId, file, data = {}) => {
     eventId = data.event;
   }
 
-  // 1. Extract text and page boundaries
+  // 1. Extract text and page boundaries (with automated Gemini Vision OCR for scanned PDFs & images)
   const extracted = await extractDocumentText(file.buffer, file.originalname, file.mimetype);
 
   const isKnowledgeBase = data.isKnowledgeBase !== undefined ? (data.isKnowledgeBase === 'true' || data.isKnowledgeBase === true) : true;
@@ -36,7 +36,7 @@ const uploadDocument = async (clubId, userId, file, data = {}) => {
     title,
     description: data.description ? data.description.trim() : '',
     fileUrl: data.fileUrl || '',
-    fileType: extracted.fileType || 'other',
+    fileType: extracted.fileType || data.fileType || 'other',
     category: data.category || 'general',
     club: clubId,
     event: eventId,
@@ -47,15 +47,17 @@ const uploadDocument = async (clubId, userId, file, data = {}) => {
     mimeType: file.mimetype,
     fileSize: file.size || file.buffer.length,
     extractedCharacterCount: extracted.fullText.length,
+    isOcrProcessed: Boolean(extracted.isOcrProcessed),
+    ocrEngine: extracted.ocrEngine || null,
     ingestionStatus: isKnowledgeBase ? 'processing' : 'processed',
-    embeddingModel: config.geminiEmbeddingModel || 'text-embedding-004',
+    embeddingModel: config.geminiEmbeddingModel || 'gemini-embedding-001',
     embeddingVersion: '1.0'
   });
 
   // If knowledge base document, perform chunking and embedding generation
   if (isKnowledgeBase) {
     try {
-      // 2. Chunk document with page boundary preservation
+      // 2. Chunk document with page boundary preservation (works for both digital and OCR pages)
       const chunks = chunkDocument(extracted.fullText, extracted.pages);
 
       // 3. Batch generate embeddings for chunks
@@ -73,6 +75,7 @@ const uploadDocument = async (clubId, userId, file, data = {}) => {
       doc.processedAt = new Date();
       doc.ingestionError = null;
     } catch (err) {
+      console.error(`[Document Service] Ingestion failed for "${title}":`, err.message);
       doc.ingestionStatus = 'failed';
       doc.ingestionError = err.message;
       doc.chunks = [];
@@ -118,8 +121,10 @@ const createDocument = async (clubId, userId, data) => {
     uploadedBy: userId,
     isKnowledgeBase,
     contentSummary: data.contentSummary || '',
+    isOcrProcessed: false,
+    ocrEngine: null,
     ingestionStatus: isKnowledgeBase ? 'pending' : 'processed',
-    embeddingModel: config.geminiEmbeddingModel || 'text-embedding-004',
+    embeddingModel: config.geminiEmbeddingModel || 'gemini-embedding-001',
     embeddingVersion: '1.0'
   });
 
@@ -170,6 +175,10 @@ const getDocuments = async (clubId, query = {}) => {
 
   if (query.isKnowledgeBase !== undefined) {
     filter.isKnowledgeBase = query.isKnowledgeBase === 'true' || query.isKnowledgeBase === true;
+  }
+
+  if (query.isOcrProcessed !== undefined) {
+    filter.isOcrProcessed = query.isOcrProcessed === 'true' || query.isOcrProcessed === true;
   }
 
   if (query.ingestionStatus) {
@@ -281,4 +290,3 @@ module.exports = {
   updateDocument,
   deleteDocument
 };
-

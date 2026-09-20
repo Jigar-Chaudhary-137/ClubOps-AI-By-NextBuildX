@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Calendar,
@@ -7,30 +7,112 @@ import {
   User,
   Tag,
   Edit,
-  MoreVertical,
+  Trash2,
   CheckCircle2,
   AlertCircle,
   Sparkles,
   GitBranch,
   ShieldAlert,
   FileEdit,
-  UserCheck
+  UserCheck,
+  Check
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
-import { AIBadge, AIIcon, AIInsightCard } from '../../components/ai';
+import { AIBadge, AIIcon } from '../../components/ai';
 import {
   TaskStatusBadge,
   TaskPriorityBadge,
   AITaskIndicator,
   CreateTaskModal
 } from '../../components/tasks';
+import { getTaskById, updateTaskStatus, deleteTask } from '../../services/api/tasks';
 
 export default function TaskDetailsPage() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  useEffect(() => {
+    async function loadTask() {
+      if (!taskId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getTaskById(taskId);
+        if (res?.data) {
+          setTask(res.data);
+        }
+      } catch (err) {
+        console.error('Error fetching task details:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load task details');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTask();
+  }, [taskId]);
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      setStatusUpdating(true);
+      const res = await updateTaskStatus(taskId, newStatus);
+      if (res?.data) {
+        setTask(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    try {
+      await deleteTask(taskId);
+      navigate('/tasks');
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-400">Loading task data from MongoDB...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !task) {
+    return (
+      <div className="max-w-4xl mx-auto py-10 space-y-4">
+        <Link to="/tasks" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white">
+          <ArrowLeft className="w-4 h-4" /> Back to Tasks
+        </Link>
+        <Card className="border-rose-500/30 bg-rose-500/10">
+          <CardContent className="p-6 text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
+            <h3 className="text-base font-semibold text-white">Task Not Found</h3>
+            <p className="text-xs text-rose-200">{error || 'The requested task could not be retrieved from the database.'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const assignedUser = typeof task.assignedTo === 'object' ? task.assignedTo?.name : 'Unassigned';
+  const eventTitle = typeof task.event === 'object' ? task.event?.title : (typeof task.eventId === 'object' ? task.eventId?.title : 'General Task');
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
@@ -45,27 +127,9 @@ export default function TaskDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Badge variant="neutral">Task ID: #{taskId}</Badge>
-          <Badge variant="primary" dot>Awaiting Integration</Badge>
+          <Badge variant="neutral">Task ID: #{task._id?.substring(0, 8)}</Badge>
+          <Badge variant="primary" dot>MongoDB Connected</Badge>
         </div>
-      </div>
-
-      {/* Backend Integration Info Banner */}
-      <div className="p-3.5 rounded-xl bg-[#151D2E] border border-[#263247] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#94A3B8]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-white">Task Details Preview:</span>{' '}
-            Live task record #{taskId} will be dynamically retrieved from the backend API in the upcoming integration phase.
-          </div>
-        </div>
-        <Link to="/ai">
-          <Button variant="ai" size="sm" leftIcon={<Sparkles className="w-3.5 h-3.5" />}>
-            AI Task Agent
-          </Button>
-        </Link>
       </div>
 
       {/* Task Header */}
@@ -74,22 +138,33 @@ export default function TaskDetailsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2.5">
               <div className="flex flex-wrap items-center gap-2.5">
-                <TaskStatusBadge status="To Do" />
-                <TaskPriorityBadge priority="Medium" />
-                <AITaskIndicator />
+                <TaskStatusBadge status={task.status} />
+                <TaskPriorityBadge priority={task.priority} />
+                {task.source === 'meeting' || task.aiGenerated ? <AITaskIndicator /> : null}
               </div>
 
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                Operational Task Details
+                {task.title}
               </h1>
 
               <p className="text-xs sm:text-sm text-[#94A3B8] max-w-2xl leading-relaxed">
-                Task specifications, dependencies, assignees, and real-time execution progress.
+                {task.description || 'No description provided.'}
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              {task.status !== 'completed' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Check className="w-3.5 h-3.5" />}
+                  disabled={statusUpdating}
+                  onClick={() => handleStatusChange('completed')}
+                >
+                  Mark Done
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -97,6 +172,15 @@ export default function TaskDetailsPage() {
                 onClick={() => setIsEditModalOpen(true)}
               >
                 Edit Task
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-rose-400 hover:text-rose-300 hover:border-rose-500/40"
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                onClick={handleDelete}
+              >
+                Delete
               </Button>
             </div>
           </div>
@@ -121,8 +205,8 @@ export default function TaskDetailsPage() {
                 <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider block mb-1">
                   Description
                 </span>
-                <p className="text-xs sm:text-sm text-white leading-relaxed p-3 rounded-lg bg-[#111827] border border-[#263247]">
-                  Detailed description and deliverables will populate here when selected from the tasks repository.
+                <p className="text-xs sm:text-sm text-white leading-relaxed p-3.5 rounded-lg bg-[#111827] border border-[#263247]">
+                  {task.description || 'No detailed specifications provided for this task.'}
                 </p>
               </div>
 
@@ -133,7 +217,7 @@ export default function TaskDetailsPage() {
                     <Tag className="w-3.5 h-3.5 text-[#818CF8]" />
                     <span>Linked Event</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">—</p>
+                  <p className="text-sm font-semibold text-white mt-1">{eventTitle || 'General'}</p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -141,7 +225,7 @@ export default function TaskDetailsPage() {
                     <User className="w-3.5 h-3.5 text-[#4ADE80]" />
                     <span>Assigned Owner</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">Unassigned</p>
+                  <p className="text-sm font-semibold text-white mt-1">{assignedUser || 'Unassigned'}</p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -149,7 +233,9 @@ export default function TaskDetailsPage() {
                     <Calendar className="w-3.5 h-3.5 text-[#F59E0B]" />
                     <span>Target Due Date</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">—</p>
+                  <p className="text-sm font-semibold text-white mt-1">
+                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline set'}
+                  </p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -157,26 +243,41 @@ export default function TaskDetailsPage() {
                     <Clock className="w-3.5 h-3.5 text-[#64748B]" />
                     <span>Last Updated</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">—</p>
+                  <p className="text-sm font-semibold text-white mt-1">
+                    {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : 'Recently'}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Activity / History Log */}
+          {/* Quick Status Setter */}
           <Card className="border-[#263247]">
             <CardHeader>
               <div>
-                <CardTitle>Activity & Execution History</CardTitle>
-                <CardDescription>Status updates, comments, and task modifications</CardDescription>
+                <CardTitle>Update Status</CardTitle>
+                <CardDescription>Move task through operational workflow</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              <EmptyState
-                icon={<Clock className="w-6 h-6 text-[#818CF8]" />}
-                title="No activity recorded yet"
-                description="Task activity will appear here once connected to the backend."
-              />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'todo', label: 'To Do' },
+                  { key: 'in_progress', label: 'In Progress' },
+                  { key: 'review', label: 'In Review' },
+                  { key: 'completed', label: 'Completed' }
+                ].map((s) => (
+                  <Button
+                    key={s.key}
+                    variant={task.status === s.key ? 'primary' : 'outline'}
+                    size="sm"
+                    disabled={statusUpdating || task.status === s.key}
+                    onClick={() => handleStatusChange(s.key)}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -190,70 +291,38 @@ export default function TaskDetailsPage() {
                   <AIIcon size="sm" />
                   <div>
                     <CardTitle className="text-sm">AI Task Assistance</CardTitle>
-                    <CardDescription>Operational copilot tools</CardDescription>
+                    <CardDescription>Operational copilot</CardDescription>
                   </div>
                 </div>
-                <AIBadge size="sm">Copilot</AIBadge>
+                <AIBadge size="sm">Gemini AI</AIBadge>
               </div>
             </CardHeader>
             <CardContent className="space-y-2.5">
               <p className="text-xs text-[#94A3B8] leading-relaxed mb-3">
-                ClubOps AI can analyze this task to propose optimizations, assignees, or sub-deliverables:
+                Use ClubOps Operations Agent to automate task refinement and cross-team execution:
               </p>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
-                leftIcon={<GitBranch className="w-3.5 h-3.5 text-[#818CF8]" />}
-                disabled
-              >
-                Break into Subtasks
-              </Button>
+              <Link to="/ai" className="block">
+                <Button
+                  variant="ai"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+                >
+                  Consult Operations Agent
+                </Button>
+              </Link>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
-                leftIcon={<Clock className="w-3.5 h-3.5 text-[#F59E0B]" />}
-                disabled
-              >
-                Suggest Realistic Deadline
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
-                leftIcon={<UserCheck className="w-3.5 h-3.5 text-[#4ADE80]" />}
-                disabled
-              >
-                Suggest Optimal Assignee
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
-                leftIcon={<FileEdit className="w-3.5 h-3.5 text-[#38BDF8]" />}
-                disabled
-              >
-                Refine Task Description
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
-                leftIcon={<ShieldAlert className="w-3.5 h-3.5 text-[#F87171]" />}
-                disabled
-              >
-                Check for Operational Risks
-              </Button>
-
-              <div className="pt-3 mt-1 border-t border-[#263247]/60 text-[11px] text-[#64748B]">
-                AI operations copilot will connect to Gemini API in later backend phases.
-              </div>
+              <Link to="/risks" className="block">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
+                  leftIcon={<ShieldAlert className="w-3.5 h-3.5 text-[#F87171]" />}
+                >
+                  Run Risk Intelligence Scan
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

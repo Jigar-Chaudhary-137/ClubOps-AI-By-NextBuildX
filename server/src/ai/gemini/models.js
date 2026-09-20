@@ -1,9 +1,11 @@
 const config = require('../../config/env');
 
+const defaultModel = config.geminiModel || 'gemini-3.6-flash';
+
 const AI_MODELS = {
-  default: config.geminiModel || 'gemini-1.5-flash',
-  flash: 'gemini-1.5-flash',
-  pro: 'gemini-1.5-pro'
+  default: defaultModel,
+  flash: defaultModel,
+  pro: defaultModel
 };
 
 const GENERATION_CONFIG = {
