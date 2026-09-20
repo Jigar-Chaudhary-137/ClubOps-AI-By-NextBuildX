@@ -90,7 +90,7 @@ graph TD
     end
 
     subgraph AI & Realtime Infrastructure
-        AIServices --> Gemini[Google Gemini 1.5 Flash / Pro]
+        AIServices --> Gemini[Google Gemini (gemini-3.6-flash)]
         AIServices --> RAG[RAG Vector Store & Trigram Fallback Embeddings]
         AIServices --> Tools[Secure Agent Tool Registry]
         CoreServices --> SSE[Native Server-Sent Events SSE Realtime Engine]

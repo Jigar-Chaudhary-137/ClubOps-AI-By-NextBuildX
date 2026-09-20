@@ -80,7 +80,7 @@ All REST API endpoints return the unified JSON envelope:
     "responseTimeMs": 5,
     "services": {
       "mongodb": { "status": "healthy", "readyState": 1, "database": "clubops_ai", "latencyMs": 2 },
-      "gemini": { "status": "healthy", "configured": true, "model": "gemini-1.5-flash" },
+      "gemini": { "status": "healthy", "configured": true, "model": "gemini-3.6-flash" },
       "rag": { "status": "healthy", "embeddingDimension": 768, "totalDocuments": 4, "totalChunks": 8 },
       "realtime": { "status": "healthy", "activeConnections": 1, "uniqueUsers": 1, "uniqueClubs": 1, "eventListeners": 1 }
     },

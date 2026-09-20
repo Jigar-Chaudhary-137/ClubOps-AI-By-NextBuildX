@@ -2,133 +2,139 @@
 
 # 🚀 ClubOps AI
 
-### AI-Powered Event Operations Platform for College Clubs
+### AI-Powered Operations Platform for College Clubs
+
+**Team:** NextBuildX &nbsp;|&nbsp; **Problem Statement:** PS-3 — ClubOps AI &nbsp;|&nbsp; **Hackathon:** BIT N BUILD’26 Gujarat Round
 
 [![Problem Statement](https://img.shields.io/badge/Problem%20Statement-PS--3-6366f1?style=for-the-badge)](docs/hackathon/JUDGE_EVALUATION.md)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb)](https://mongodb.com)
-[![Gemini](https://img.shields.io/badge/Google-Gemini%201.5%20Flash-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
+[![Google Gemini](https://img.shields.io/badge/Google-Gemini%20AI-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev)
 
-**ClubOps AI transforms chaotic club operations into one intelligent, AI-grounded workspace — plan events, extract meeting actions, manage volunteers, and run your operations agent, all in one platform.**
+**ClubOps AI transforms chaotic college club operations into a unified, intelligent, and grounded workspace — plan events, extract meeting actions, allocate volunteers, analyze risks, query club documents with RAG, and execute operational workflows with human-confirmed AI actions.**
 
-[📸 Screenshots](#-screenshots) · [⚡ Quick Start](#-quick-start) · [🏗 Architecture](#-architecture) · [🤖 AI Features](#-ai--rag-features) · [📡 API Reference](#-api-reference) · [🔑 Demo Credentials](#-demo-credentials)
-
+[📸 Screenshots](#-screenshots) · [⚡ Quick Start](#-quick-start) · [🏗 Architecture](#-architecture) · [🤖 AI & RAG Workflows](#-ai-workflows) · [🎬 Demo Flow](docs/DEMO.md) · [📡 API Reference](docs/API.md) · [🔑 Demo Credentials](#-demo-credentials)
 
 </div>
 
 ---
 
-## 🎯 What Is ClubOps AI?
+## 📌 Problem
 
-College club operations are scattered across spreadsheets, WhatsApp threads, and email chains. **ClubOps AI** consolidates the entire operations lifecycle into a single intelligent platform:
+College clubs coordinate events, tasks, volunteers, meetings, documents, deadlines, risks, and announcements across disconnected tools such as WhatsApp chats, spreadsheets, and shared drives.
 
-| Without ClubOps AI | With ClubOps AI |
-|---|---|
-| Meeting notes trapped in chat history | Transcripts processed → action items extracted automatically |
-| Tasks assigned verbally, forgotten | AI creates tasks, identifies owners, sets deadlines |
-| Risks discovered too late | Proactive risk scoring across event milestones |
-| Budget docs gathering dust | RAG knowledge base answers queries instantly |
-| Announcements drafted manually | AI writes, targets, and broadcasts in seconds |
-
----
-
-## ✨ Core Feature Set
-
-<table>
-<tr>
-<td width="50%">
-
-### 🗓 Event Management
-- Full event lifecycle (planning → active → completed)
-- Venue tracking, date management, capacity
-- Status dashboards with live task completion metrics
-- Per-event document and knowledge isolation
-
-### ✅ Task Management
-- Kanban-style boards with 5 statuses
-- Priority levels: Low → Urgent
-- Assignee tracking and deadline management
-- AI-extracted action items auto-create tasks
-
-### 👥 Volunteer Coordination
-- Department-based volunteer registry
-- Availability state machine (available → on-duty → unavailable)
-- Skills tracking, hours logging
-- AI lists available volunteers in real-time
-
-</td>
-<td width="50%">
-
-### 🎙 Meeting Intelligence
-- Upload raw transcripts or meeting notes
-- AI extracts structured action items
-- Fuzzy entity resolution maps actions to real members
-- Deadline detection from natural language
-
-### 🛡 Risk Register
-- Severity (Low → Critical) × Probability matrix
-- AI-powered risk detection from milestone gaps
-- Mitigation plan tracking per risk
-- Operations agent can log risks autonomously
-
-### 📣 Announcements & Broadcasts
-- AI drafts announcements from context
-- Target audiences: All / Organizers / Volunteers / Members
-- Multi-channel delivery simulation: In-App, Email, WhatsApp
-- Priority escalation support
-
-</td>
-</tr>
-</table>
+As events scale:
+- Meeting decisions and action items get buried in chat histories.
+- Tasks are assigned verbally and forgotten.
+- Operational risks (overdue milestones, unassigned critical tasks, volunteer shortages) are discovered too late.
+- Club documents, budgets, and policies gather dust instead of answering member questions.
+- Organizers spend hours drafting and dispatching announcements manually.
 
 ---
 
-## 🤖 AI & RAG Features
+## 💡 Solution
 
-### 1. 🧠 RAG Knowledge Base (Retrieval-Augmented Generation)
+**ClubOps AI** centralizes the complete club operations lifecycle into a single, multi-tenant workspace augmented by Gemini AI and Retrieval-Augmented Generation (RAG).
 
-Documents uploaded to the platform are automatically chunked, embedded via Google Gemini's embedding model (768-dimensional vectors), and stored with full vector index support. When queried, the system:
+- **Centralized Club Operations:** Manage events, Kanban task boards, volunteer rosters, meetings, risk matrices, and announcements in one cohesive application.
+- **AI-Powered Assistance:** An AI Command Center operations agent queries workspace data, finds unassigned tasks, and proposes actionable mutations.
+- **Meeting Intelligence:** Upload raw meeting notes or transcripts to automatically extract summaries, decisions, action items, task owners, and deadlines.
+- **Grounded Club Knowledge (RAG):** Upload club bylaws, guidelines, and budgets to query exact policies with source citations and zero external hallucinations.
+- **Proactive Risk Intelligence:** Hybrid heuristic and LLM risk engine flags milestone delays, volunteer deficits, and dependencies with mitigation strategies.
+- **Human-Confirmed AI Actions:** Safety-first design where AI proposals require explicit organizer approval before mutating database records.
+- **WhatsApp & Multi-Channel Announcements:** Draft announcements with AI and resolve recipients from profile contact data with automated WhatsApp recipient delivery.
 
-1. Generates a query embedding from the user's question
-2. Performs cosine-similarity vector search across the club's indexed document chunks
-3. Formats retrieved passages as grounded context
-4. Sends context + question to Gemini 1.5 Flash for a sourced, grounded answer
+---
 
-> **Deterministic fallback:** A custom trigram + DJB2 hash-based embedding engine ensures the RAG pipeline works completely offline — no API key required for evaluation.
+## ✨ Key Features
 
-### 2. 🤖 AI Operations Agent (Gemini Function Calling)
+### 🏢 Club Operations
+- **Event Management:** Full event lifecycle tracking (planning, active, completed), venue tracking, attendee capacity, and live completion metrics.
+- **Task Management:** Kanban board and list views with priorities (`low` → `urgent`), assignees, due dates, and status tracking (`todo`, `in_progress`, `review`, `completed`).
+- **Volunteer Coordination:** Department registry, availability states (`available`, `assigned`, `busy`, `unavailable`), skill tags, and profile contact management.
+- **Meeting Management:** Meeting creation, agenda tracking, attendee lists, transcript uploads, and one-click action-item conversion to tasks.
+- **Risk Management:** Severity (`low` → `critical`) × Probability matrix with mitigation plans and milestone dependency tracking.
+- **Announcements:** Multi-channel broadcast composer supporting audience targeting (Entire Club, Event Participants, Volunteers, Organizers, Custom).
 
-An autonomous, multi-turn AI agent powered by Gemini function calling with 10 registered tools:
+### 🤖 AI Capabilities
+- **AI Command Center:** Conversational operations copilot powered by Gemini function calling with full workspace context tools.
+- **Meeting Summarization & Action Extraction:** NLP parser extracts discrete tasks, resolves member names, and maps natural language dates.
+- **RAG Knowledge Base Search:** Semantic vector search across uploaded PDFs, Word docs, and policies with page-level citations.
+- **Risk Detection & Analysis:** Detects overdue milestones, unassigned critical tasks, and volunteer bottlenecks with actionable mitigation plans.
+- **AI Announcement Generator:** Context-aware announcement drafting and tone adaptation.
+- **Action Proposals with User Confirmation:** All AI mutations provide a dry-run preview and require explicit human confirmation.
 
-| Tool | Type | Description |
-|------|------|-------------|
-| `create_task` | Mutation | Creates tasks with priority & assignee |
-| `update_task_status` | Mutation | Updates task status (todo → completed) |
-| `assign_task` | Mutation | Reassigns tasks to club members by name |
-| `create_risk` | Mutation | Logs risks into the event risk register |
-| `create_announcement` | Mutation | Drafts and saves announcements |
-| `get_event_status` | Read | Queries live event metrics |
-| `list_unassigned_tasks` | Read | Finds tasks with no assignees |
-| `list_available_volunteers` | Read | Lists available volunteers by department |
-| `search_club_knowledge` | Read (RAG) | Semantic search within agent conversations |
-| `send_broadcast_alert` | Mutation | Dispatches multi-channel broadcast alerts |
+### 📢 Communication & Delivery
+- **In-App Notifications:** Real-time event notifications powered by native Server-Sent Events (SSE).
+- **WhatsApp Recipient Flow:** Automatic profile number resolution (`+91...` E.164), readiness checks, and recipient preview.
+- **Audience Preview Intelligence:** Real-time calculation of reachable recipients, valid numbers, and missing contact alerts.
 
-**Safety:** All mutation operations support `dryRun: true` for human-in-the-loop preview before execution.
+---
 
-### 3. 📊 AI Risk Analysis Engine
+## 🤖 AI Workflows
 
-- **Heuristic detection:** Scans for overdue milestones, unassigned critical tasks, low volunteer-to-task ratios
-- **LLM augmentation:** Gemini enhances detected risks with causality explanations and mitigation plans
-- **Offline fallback:** Pre-seeded risk patterns activate when Gemini API is unavailable
+### 1. AI Operations Agent Workflow
 
-### 4. 🎙 Meeting Transcript Processor
+```mermaid
+graph TD
+    A[User Query] --> B[AI Operations Agent]
+    B --> C[Workspace Tools / RAG Retrieval]
+    C --> D[Google Gemini AI]
+    D --> E[Grounded Response]
+    E --> F{Action Required?}
+    F -- Yes --> G[Action Proposal & Dry-Run Preview]
+    G --> H[User Confirmation Modal]
+    H -- Confirmed --> I[Application Action / MongoDB Mutation]
+    H -- Rejected --> J[Action Cancelled]
+    F -- No --> K[Direct Answer to User]
+```
 
-- Parses raw transcript text into structured meeting objects
-- Extracts discrete action items with assignees and deadlines
-- Fuzzy-matches participant names to actual registered club members
-- One-click "Apply Actions" converts extracted items into tracked tasks
+### 2. Meeting Intelligence Workflow
+
+```mermaid
+graph TD
+    M[Meeting Notes / Raw Transcript] --> P[AI Transcript Processor]
+    P --> G[Gemini Flash (gemini-3.6-flash) NLP Extraction]
+    G --> R[Summary + Key Decisions]
+    G --> T[Discrete Action Items + Deadlines]
+    G --> K[Risk Detection]
+    T --> F[Fuzzy Member Name Resolution]
+    F --> A[1-Click Convert to Tracked Tasks]
+    A --> DB[(MongoDB Task Board)]
+```
+
+---
+
+## 🧠 RAG Architecture
+
+ClubOps AI implements a multi-tenant **Retrieval-Augmented Generation (RAG)** pipeline designed for club documents:
+
+```
+Document Upload (PDF, DOCX, TXT, MD)
+           ↓
+Text Processing & Page Normalization
+           ↓
+Sliding-Window Chunking (800 chars, 100 overlap)
+           ↓
+Vector Embeddings (Gemini gemini-embedding-001 / 768-dim)
+           ↓
+MongoDB Multi-Tenant Vector Store ({ club: clubId })
+           ↓
+Cosine Similarity Vector Retrieval (Top-K Matches)
+           ↓
+Grounded Context Injection + Anti-Hallucination Prompt
+           ↓
+Google Gemini (gemini-3.6-flash) Grounded Synthesis
+           ↓
+Answer with Document & Page Citations
+```
+
+* **Multi-Tenant Isolation:** Vector searches strictly enforce the authenticated `clubId` filter — no cross-club data leaks.
+* **Page-Aware Citations:** PDF chunks preserve source page numbers for verifiable reference citations.
+* **Deterministic Fallback:** Robust offline vector generator ensures local development and testing remain functional without external API keys.
 
 ---
 
@@ -139,114 +145,116 @@ An autonomous, multi-turn AI agent powered by Gemini function calling with 10 re
 │                       ClubOps AI Platform                        │
 ├──────────────────────────────┬──────────────────────────────────┤
 │         Frontend             │           Backend                 │
-│   React 18 + Vite            │   Express 4.x + Node.js 18        │
-│   TailwindCSS + Recharts     │   MongoDB + Mongoose 9            │
-│   React Router v6            │   JWT Auth + RBAC                 │
-│   Axios + API Client Layer   │   Multer File Upload              │
+│   React 18 + Vite            │   Express.js + Node.js 18+        │
+│   Tailwind CSS + Recharts    │   MongoDB + Mongoose              │
+│   React Router v6            │   JWT Authentication + RBAC       │
+│   Axios API Client Layer     │   Multer File Parsing Layer       │
 └──────────────────────────────┴──────────────────────────────────┘
-                                        │
-           ┌────────────────────────────┼─────────────────────────┐
-           │                           │                          │
-    ┌──────┴──────┐            ┌───────┴──────┐          ┌───────┴──────┐
-    │  AI Layer   │            │  RAG Engine  │          │   Realtime   │
-    │             │            │              │          │              │
-    │ Gemini 1.5  │            │ Chunker      │          │ Server-Sent  │
-    │ Flash       │            │ Embeddings   │          │ Events (SSE) │
-    │ Function    │            │ VectorStore  │          │ Notification │
-    │ Calling     │            │ ragEngine.js │          │ Engine       │
-    └─────────────┘            └──────────────┘          └──────────────┘
+                                │
+        ┌───────────────────────┼────────────────────────┐
+        │                       │                        │
+ ┌──────┴──────┐         ┌──────┴──────┐          ┌──────┴──────┐
+ │  AI Layer   │         │  RAG Engine │          │   Realtime  │
+ │ Gemini AI   │         │ Chunker     │          │ Server-Sent │
+ │ Function    │         │ Embeddings  │          │ Events (SSE)│
+ │ Calling     │         │ VectorStore │          │ Broadcasts  │
+ └─────────────┘         └─────────────┘          └─────────────┘
 ```
 
-### Key Architectural Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| **Multi-tenant isolation** | Every DB query auto-scoped to `req.user.club` — no cross-club data leaks |
-| **Deterministic offline fallbacks** | All AI features degrade gracefully without a Gemini API key |
-| **Dry-run safety boundary** | Agent mutations require explicit confirmation before execution |
-| **Native SSE (no Socket.io)** | Lightweight real-time without additional infrastructure |
-| **Vector search in MongoDB** | No external vector DB needed — embeddings stored in Document model |
+### Key Architectural Safeguards
+- **Multi-Tenant Scoping:** All database operations and vector queries are automatically scoped to `req.user.club`.
+- **Contact Truth:** User profile is the single source of truth for contact details (`name`, `email`, `phone`, `whatsappNumber`).
+- **Human-in-the-Loop:** Mutating AI tools return dry-run action proposals before executing changes.
+- **Backend-Only Credentials:** API keys, JWT secrets, and provider tokens are strictly kept on the backend.
 
 ---
 
-## 📁 Repository Structure
+## 📸 Screenshots
 
-```
-ClubOps-AI-By-NextBuildX/
-├── client/                        # React Frontend (Vite + TailwindCSS)
-│   └── src/
-│       ├── components/            # Reusable UI components
-│       │   ├── ai/                # AI Command Center, Agent Chat
-│       │   ├── announcements/     # Announcement composer
-│       │   ├── events/            # Event cards, create modal
-│       │   ├── meetings/          # Meeting intelligence UI
-│       │   ├── tasks/             # Task board, create modal
-│       │   ├── volunteers/        # Volunteer management UI
-│       │   └── ui/                # Design system (Modal, Input, Select...)
-│       ├── pages/                 # Route-level page components
-│       ├── services/api/          # Axios API client layer
-│       └── context/               # React context providers
-│
-├── server/                        # Express Backend
-│   └── src/
-│       ├── ai/                    # Complete AI subsystem
-│       │   ├── agents/            # operationsAgent.js (function calling)
-│       │   ├── extraction/        # meetingProcessor.js
-│       │   ├── gemini/            # Gemini client & model configs
-│       │   ├── prompts/           # Structured LLM prompt templates
-│       │   ├── rag/               # chunker, embeddings, vectorStore, ragEngine
-│       │   ├── risk/              # riskEngine.js
-│       │   └── tools/             # toolDeclarations.js, toolExecutors.js
-│       ├── config/                # Environment & Gemini configuration
-│       ├── controllers/           # Express route handlers (12 domains)
-│       ├── middleware/            # Auth, RBAC, error handling
-│       ├── models/                # Mongoose schemas (12 models)
-│       ├── routes/                # REST API route definitions
-│       ├── scripts/               # seed.js, demo-walkthrough.js, benchmark.js
-│       └── services/              # Business logic service layer
-│
-└── docs/
-    ├── screenshots/               # 24 live application screenshots
-    ├── hackathon/                 # JUDGE_EVALUATION.md
-    ├── ARCHITECTURE.md            # System design & data flow
-    ├── API.md                     # Complete API reference
-    ├── AI.md                      # AI features & agent docs
-    └── RAG.md                     # RAG pipeline documentation
-```
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/login.png" width="280"/><br/><sub><b>Authentication & Role Login</b></sub></td>
+<td align="center"><img src="docs/screenshots/dashboard.png" width="280"/><br/><sub><b>Operations Dashboard</b></sub></td>
+<td align="center"><img src="docs/screenshots/events.png" width="280"/><br/><sub><b>Event Management</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/event-create.png" width="280"/><br/><sub><b>Create Event Modal</b></sub></td>
+<td align="center"><img src="docs/screenshots/tasks.png" width="280"/><br/><sub><b>Kanban Task Board</b></sub></td>
+<td align="center"><img src="docs/screenshots/task-details.png" width="280"/><br/><sub><b>Task Details & Assignees</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/volunteers.png" width="280"/><br/><sub><b>Volunteer Roster & WhatsApp</b></sub></td>
+<td align="center"><img src="docs/screenshots/meeting-intelligence.png" width="280"/><br/><sub><b>AI Meeting Intelligence</b></sub></td>
+<td align="center"><img src="docs/screenshots/risks.png" width="280"/><br/><sub><b>Risk Assessment Matrix</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/knowledge-rag.png" width="280"/><br/><sub><b>RAG Knowledge Base</b></sub></td>
+<td align="center"><img src="docs/screenshots/ai-command-center.png" width="280"/><br/><sub><b>AI Command Center</b></sub></td>
+<td align="center"><img src="docs/screenshots/announcements.png" width="280"/><br/><sub><b>Announcements & WhatsApp Preview</b></sub></td>
+</tr>
+</table>
+
+---
+
+## 🧱 Technology Stack
+
+| Layer | Technologies Used |
+|---|---|
+| **Frontend** | React 18, Vite 6, Tailwind CSS, React Router v6, Axios, Lucide React, Recharts |
+| **Backend** | Node.js (18+), Express.js 4.x, Mongoose, Multer |
+| **Database** | MongoDB (local or Atlas) |
+| **AI & NLP** | Google Gemini (`gemini-3.6-flash`, `@google/generative-ai`), Gemini Embeddings (`gemini-embedding-001`, 768-dim) |
+| **Authentication** | JWT (`jsonwebtoken`), Password Hashing (`bcryptjs`) |
+| **File Parsers** | `pdf-parse` (PDFs), `mammoth` (Word documents) |
+| **Realtime** | Native Server-Sent Events (SSE) |
+| **Security** | Helmet.js, CORS, Multi-tenant query isolation |
 
 ---
 
 ## ⚡ Quick Start
 
 ### Prerequisites
-
-- **Node.js** 18+
-- **MongoDB** (local or Atlas connection string)
-- **Google Gemini API key** (optional — platform works offline with fallbacks)
+- **Node.js** 18+ (tested on v18, v20, v22)
+- **MongoDB** (local `mongodb://localhost:27017/clubops_ai` or MongoDB Atlas URI)
+- **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/))
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/YOUR_ORG/ClubOps-AI-By-NextBuildX.git
+git clone https://github.com/NextBuildX/ClubOps-AI.git
 cd ClubOps-AI-By-NextBuildX
 
-# Install backend dependencies
-cd server && npm install
+# Install server dependencies
+cd server
+npm install
 
-# Install frontend dependencies
-cd ../client && npm install
+# Install client dependencies
+cd ../client
+npm install
+
+# Return to root
+cd ..
 ```
 
-### 2. Configure Environment
+### 2. Configure Environment Variables
 
 **Backend** (`server/.env`):
 ```env
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/clubops
-JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=7d
-GEMINI_API_KEY=your_gemini_api_key   # Optional — offline fallbacks built-in
 NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/clubops_ai
+CLIENT_URL=http://localhost:5173
+JWT_SECRET=your_jwt_secret_key_here
+JWT_EXPIRES_IN=7d
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.6-flash
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+
+# WhatsApp Configuration (Optional)
+WHATSAPP_PROVIDER=cloud_api
+WHATSAPP_API_TOKEN=your_whatsapp_token
+WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
+WHATSAPP_DEFAULT_COUNTRY_CODE=91
 ```
 
 **Frontend** (`client/.env`):
@@ -254,21 +262,27 @@ NODE_ENV=development
 VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
-### 3. Seed Demo Data
+### 3. Seed Database with Realistic Demo Data
 
 ```bash
 cd server
 npm run seed
+cd ..
 ```
 
 This provisions:
-- 2 isolated clubs (NextBuild Tech `TECH2026`, Robotics & Automation `ROBO2026`)
-- 3 user personas with JWT-ready demo credentials
-- 4 seeded events with tasks, volunteers, and risks
-- RAG-indexed policy documents and meeting transcripts
+- 2 isolated clubs: NextBuild Tech (`TECH2026`) and Robotics Club (`ROBO2026`)
+- 3 personas with pre-configured credentials
+- Seeded events, tasks, volunteers, meetings, documents, and risks
 
-### 4. Start the Platform
+### 4. Run Development Servers
 
+From the root directory:
+```bash
+npm run dev
+```
+
+Or start individually:
 ```bash
 # Terminal 1 — Backend (Express on port 5000)
 cd server && npm run dev
@@ -277,363 +291,106 @@ cd server && npm run dev
 cd client && npm run dev
 ```
 
-Open **[http://localhost:5173](http://localhost:5173)** and log in with the demo credentials below.
+* **Frontend:** [http://localhost:5173](http://localhost:5173)
+* **Backend API:** [http://localhost:5000](http://localhost:5000)
+* **API Health Check:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
 ---
 
 ## 🔑 Demo Credentials
 
-> Provisioned by `npm run seed` for evaluation purposes.
+| Persona | Email | Password | Role | Club Workspace |
+|---|---|---|---|---|
+| **Lead Organizer** | `lead@club.edu` | `Password123!` | `organizer` | NextBuild Tech (`TECH2026`) |
+| **Event Volunteer** | `rahul@club.edu` | `Password123!` | `volunteer` | NextBuild Tech (`TECH2026`) |
+| **Isolation Lead** | `robo.lead@club.edu` | `Password123!` | `organizer` | Robotics Club (`ROBO2026`) |
 
-| Persona | Email | Password | Role | Club |
-|---------|-------|----------|------|------|
-| **Lead Organizer** | `lead@club.edu` | `Password123!` | organizer | NextBuild Tech (`TECH2026`) |
-| **Event Volunteer** | `rahul@club.edu` | `Password123!` | volunteer | NextBuild Tech (`TECH2026`) |
-| **Isolation Lead** | `robo.lead@club.edu` | `Password123!` | organizer | Robotics Club (`ROBO2026`) |
-
-*Multi-Tenant Guarantee:* Data belonging to `TECH2026` cannot be read or queried via RAG by users in `ROBO2026`.
+*Multi-Tenant Guarantee: Data belonging to `TECH2026` is completely inaccessible to users in `ROBO2026`.*
 
 ---
 
-## 📸 Screenshots
+## 🎬 Demo Flow for Judges
 
-<table>
-<tr>
-<td align="center"><img src="docs/screenshots/login.png" width="280"/><br/><sub><b>Login</b></sub></td>
-<td align="center"><img src="docs/screenshots/dashboard.png" width="280"/><br/><sub><b>Dashboard</b></sub></td>
-<td align="center"><img src="docs/screenshots/events.png" width="280"/><br/><sub><b>Events</b></sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/event-create.png" width="280"/><br/><sub><b>Create Event</b></sub></td>
-<td align="center"><img src="docs/screenshots/tasks.png" width="280"/><br/><sub><b>Tasks Board</b></sub></td>
-<td align="center"><img src="docs/screenshots/task-details.png" width="280"/><br/><sub><b>Task Details</b></sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/volunteers.png" width="280"/><br/><sub><b>Volunteers</b></sub></td>
-<td align="center"><img src="docs/screenshots/meeting-intelligence.png" width="280"/><br/><sub><b>Meeting Intelligence</b></sub></td>
-<td align="center"><img src="docs/screenshots/risks.png" width="280"/><br/><sub><b>Risk Register</b></sub></td>
-</tr>
-<tr>
-<td align="center"><img src="docs/screenshots/knowledge-rag.png" width="280"/><br/><sub><b>RAG Knowledge Base</b></sub></td>
-<td align="center"><img src="docs/screenshots/ai-command-center.png" width="280"/><br/><sub><b>AI Command Center</b></sub></td>
-<td align="center"><img src="docs/screenshots/announcements.png" width="280"/><br/><sub><b>Announcements</b></sub></td>
-</tr>
-</table>
+Follow the complete 16-step demonstration flow in [docs/DEMO.md](docs/DEMO.md):
+
+1. **Login & Dashboard:** Log in as Lead Organizer and view operational KPIs and live risk alerts.
+2. **Event & Task Management:** Open an event and manage the Kanban task board.
+3. **Volunteer Roster:** Review volunteer availability, skills, and WhatsApp contact details.
+4. **Meeting Transcript Intelligence:** Paste meeting notes, run AI extraction to discover action items, and convert them to tasks with 1 click.
+5. **RAG Knowledge Base:** Query club policy documents and receive grounded answers with citations.
+6. **AI Command Center:** Ask the Operations Agent to inspect unassigned tasks and create a high-priority task.
+7. **Action Proposal & Safety:** Review the dry-run proposal, confirm execution, and observe live updates.
+8. **Announcement Composer:** Draft an announcement with AI and view the automated WhatsApp recipient breakdown.
 
 ---
 
-## 📡 API Reference
+## 📡 API Reference Overview
 
-All endpoints are prefixed with `/api`. Authentication via `Authorization: Bearer <JWT>`.
+All endpoints are mounted on `/api` and require `Authorization: Bearer <token>` (except public auth).
 
-| Module | Method | Endpoint | Description |
-|--------|--------|----------|-------------|
-| Auth | POST | `/api/auth/register` | Register user |
-| Auth | POST | `/api/auth/login` | Login → JWT |
-| Auth | GET | `/api/auth/me` | Get profile |
-| Events | GET | `/api/events` | List club events |
-| Events | POST | `/api/events` | Create event |
-| Events | GET | `/api/events/:id` | Event details |
-| Tasks | GET | `/api/tasks` | List tasks |
-| Tasks | POST | `/api/tasks` | Create task |
-| Tasks | PATCH | `/api/tasks/:id/status` | Update task status |
-| Volunteers | GET | `/api/volunteers` | List volunteers |
-| Volunteers | PATCH | `/api/volunteers/:id/availability` | Set availability |
-| Meetings | GET | `/api/meetings` | List meetings |
-| Meetings | POST | `/api/meetings` | Create / upload transcript |
-| Risks | GET | `/api/risks` | List risks |
-| Risks | POST | `/api/risks` | Create risk |
-| Documents | GET | `/api/documents` | List documents |
-| Documents | POST | `/api/documents` | Upload document |
-| Announcements | POST | `/api/announcements` | Create announcement |
-| Announcements | POST | `/api/announcements/:id/broadcast` | Multi-channel broadcast |
-| AI | POST | `/api/ai/agent/chat` | Operations Agent chat |
-| AI | POST | `/api/ai/process-meeting/:id` | Process transcript |
-| AI | POST | `/api/ai/extract-actions` | Extract action items |
-| AI | POST | `/api/ai/analyze-risks/:eventId` | AI risk analysis |
-| AI | POST | `/api/ai/knowledge/query` | RAG knowledge query |
-| AI | POST | `/api/ai/knowledge/search` | RAG semantic search |
-| AI | POST | `/api/ai/generate-announcement` | AI announcement draft |
-| Health | GET | `/api/health` | Health check |
-| Health | GET | `/api/health/full` | Full subsystem diagnostics |
+| Domain | Method | Endpoint | Description |
+|---|---|---|---|
+| **Auth** | `POST` | `/api/auth/register` | Register new user in club |
+| **Auth** | `POST` | `/api/auth/login` | Login and receive JWT |
+| **Auth** | `GET` | `/api/auth/me` | Authenticated user profile |
+| **Events** | `GET`, `POST` | `/api/events` | List or create events |
+| **Events** | `GET`, `PATCH` | `/api/events/:id` | Get or update event details |
+| **Tasks** | `GET`, `POST` | `/api/tasks` | List or create tasks |
+| **Tasks** | `PATCH` | `/api/tasks/:id/status` | Update task status |
+| **Volunteers** | `GET`, `POST` | `/api/volunteers` | List or register volunteers |
+| **Volunteers** | `PATCH` | `/api/volunteers/:id` | Update volunteer & contact info |
+| **Meetings** | `GET`, `POST` | `/api/meetings` | List or create meetings |
+| **Risks** | `GET`, `POST` | `/api/risks` | List or log risks |
+| **Documents** | `GET`, `POST` | `/api/documents` | List or upload docs for RAG |
+| **Announcements**| `POST` | `/api/announcements` | Create announcement |
+| **Announcements**| `POST` | `/api/announcements/preview-recipients` | Preview channel reach & WhatsApp status |
+| **Announcements**| `POST` | `/api/announcements/:id/broadcast` | Broadcast to channels |
+| **AI** | `POST` | `/api/ai/agent/chat` | AI Operations Agent conversation |
+| **AI** | `POST` | `/api/ai/process-meeting/:id` | AI meeting transcript extraction |
+| **AI** | `POST` | `/api/ai/extract-actions` | Extract discrete action items |
+| **AI** | `POST` | `/api/ai/analyze-risks/:eventId` | Heuristic + LLM risk analysis |
+| **AI** | `POST` | `/api/ai/knowledge/query` | RAG grounded Q&A with citations |
+| **AI** | `POST` | `/api/ai/knowledge/search` | Semantic chunk vector search |
+| **AI** | `POST` | `/api/ai/generate-announcement`| AI announcement drafting |
 
-See [docs/API.md](docs/API.md) for full request/response schemas.
+*For complete request/response schemas, see [docs/API.md](docs/API.md).*
 
 ---
 
-## 🔬 Automated Demonstration & Benchmarks
+## 🚀 Implemented vs Future Scope
 
-### Golden Path Demo (7 Steps)
+### ✅ Implemented & Working
+- [x] Multi-tenant club workspace isolation with JWT & RBAC
+- [x] Event lifecycle management with live task progress
+- [x] Kanban task boards with status workflows and assignee tracking
+- [x] Volunteer coordination with availability states and WhatsApp contact management
+- [x] AI meeting transcript parsing, summary, decisions, and action-item extraction
+- [x] One-click conversion of extracted actions into tracked tasks
+- [x] Document parsing (PDF, Word, TXT, MD) with sliding-window chunking
+- [x] RAG vector search with source citations
+- [x] AI Operations Agent with Gemini function calling and read/write workspace tools
+- [x] Human-in-the-loop dry-run confirmation before applying mutations
+- [x] Hybrid heuristic + LLM risk assessment
+- [x] AI announcement drafting with tone adaptation
+- [x] WhatsApp audience resolution and recipient preview intelligence
+- [x] Real-time Server-Sent Events (SSE) notification stream
 
-```bash
-cd server && npm run demo
-```
-
-| Step | What It Demonstrates |
-|------|----------------------|
-| 1 | Multi-tenant auth & club isolation |
-| 2 | Meeting transcript processing & action extraction |
-| 3 | Task management lifecycle (create → assign → complete) |
-| 4 | AI risk analysis & mitigation planning |
-| 5 | RAG knowledge base query with source attribution |
-| 6 | AI Operations Agent — dry-run + live task creation |
-| 7 | Multi-channel announcement broadcast |
-
-### Performance Benchmarks
-
-```bash
-cd server && npm run benchmark
-```
-
-| Endpoint | Throughput | P95 Latency |
-|----------|-----------|-------------|
-| Health ping | >300 req/s | <105ms |
-| Subsystem diagnostics | >170 req/s | <90ms |
-| Task board query | >95 req/s | <345ms |
-| RAG vector search | >22 req/s | <775ms |
-| Concurrent stress (500 req) | 100% success | — |
-
----
-
-## 🛡 Security
-
-- **JWT Authentication** with configurable expiry
-- **Role-Based Access Control:** Admin / Organizer / Volunteer permission tiers
-- **Multi-Tenant Isolation:** All DB queries automatically scoped to authenticated club
-- **Helmet.js:** HTTP security headers on all responses
-- **Input Validation:** Schema-level validation on all 12 Mongoose models
-- **Agent Safety Boundary:** Dry-run preview before any mutation execution
-
----
-
-## 🧱 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend Framework | React 18 + Vite |
-| UI Styling | TailwindCSS 3 |
-| Charts | Recharts |
-| Icons | Lucide React |
-| Routing | React Router v6 |
-| HTTP Client | Axios |
-| Backend Framework | Express 4.x |
-| Database | MongoDB + Mongoose 9 |
-| AI Model | Google Gemini 1.5 Flash |
-| AI SDK | `@google/generative-ai` v0.24 |
-| Auth | JWT (`jsonwebtoken` + `bcryptjs`) |
-| File Parsing | `pdf-parse`, `mammoth` |
-| File Upload | Multer |
-| Security | Helmet.js, CORS |
-| Realtime | Server-Sent Events (native Node.js) |
-| Dev Server | Nodemon |
-
----
-
-## 📖 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, data flow, multi-tenancy model |
-| [API.md](docs/API.md) | Complete REST API reference with request/response schemas |
-| [AI.md](docs/AI.md) | AI features, agent tools, Gemini integration details |
-| [RAG.md](docs/RAG.md) | RAG pipeline, embeddings, vector search implementation |
-| [JUDGE_EVALUATION.md](docs/hackathon/JUDGE_EVALUATION.md) | PS-3 requirement mapping, cURL examples, benchmark results |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup and contribution guidelines |
-
----
-
-## 🏆 Hackathon — PS-3 Requirements Coverage
-
-ClubOps AI implements all **12 Problem Statement 3 requirements**:
-
-| # | Requirement | Implementation | Status |
-|---|-------------|---------------|--------|
-| 1 | AI-assisted event planning | `POST /api/ai/plan-event` → `eventPlanner.js` | ✅ |
-| 2 | Task management | Full CRUD + status lifecycle → `task.service.js` | ✅ |
-| 3 | Volunteer management | Dept registry + availability states → `volunteer.service.js` | ✅ |
-| 4 | Meeting transcript processing | `POST /api/ai/process-meeting/:id` → `meetingProcessor.js` | ✅ |
-| 5 | Action item extraction | `POST /api/ai/extract-actions` → Gemini NLP | ✅ |
-| 6 | Task owner identification | Fuzzy entity resolution → registered member roster | ✅ |
-| 7 | Deadline identification | Temporal expression parsing from transcripts | ✅ |
-| 8 | Risk identification | Heuristic + LLM detection → `riskEngine.js` | ✅ |
-| 9 | Risk explanation | Causality reasoning + mitigation plans | ✅ |
-| 10 | Document & RAG knowledge base | 768-dim embeddings + vector similarity search | ✅ |
-| 11 | AI-assisted announcements | Multi-channel broadcast → `broadcast.service.js` | ✅ |
-| 12 | AI-assisted agent workflows | Gemini function calling + dry-run safety | ✅ |
+### 🔮 Future Scope
+- Automated WhatsApp bidirectional chatbot for volunteer check-ins
+- Live audio/speech-to-text recording during in-person meetings
+- Budget expense receipt OCR and automatic ledger reconciliation
+- Cross-club inter-collegiate collaboration networks
 
 ---
 
 ## 👥 Team
 
-**NextBuildX** — Built for Google Developer Groups Hackathon, PS-3
+**Team NextBuildX** — Built for **BIT N BUILD’26 Gujarat Round (Problem Statement 3: ClubOps AI)**.
 
 ---
 
 <div align="center">
 
-Made with ❤️ by NextBuildX &nbsp;·&nbsp; [MIT License](LICENSE)
+Made with ❤️ by **NextBuildX** &nbsp;·&nbsp; [MIT License](LICENSE)
 
 </div>
-
----
-
-> [!NOTE]
-> **Initial Project Scaffold**: This repository currently houses the baseline architectural structure designed for parallel two-member development. Business features, database schemas, and AI models will be progressively integrated in upcoming phases.
-
----
-
-## 1. Problem Statement
-
-College clubs often coordinate events using a fragmented set of tools: WhatsApp groups, scattered spreadsheets, unorganized meeting notes, personal task lists, and shared drives. As events grow in scale, tracking responsibilities, deadlines, task dependencies, volunteer allocations, documents, and operational risks becomes error-prone and chaotic.
-
-**ClubOps AI** is a centralized, AI-powered event operations platform that unifies club operations under one roof. Going beyond simple chatbots, ClubOps AI integrates deep operational intelligence capable of extracting action items, identifying risks, querying club knowledge, and executing concrete actions within the application.
-
----
-
-## 2. Technology Stack
-
-* **Frontend**: React, Vite, Tailwind CSS, React Router, Axios, Lucide React icons, Recharts
-* **Backend**: Node.js, Express.js (REST API Architecture)
-* **Database**: PostgreSQL (Relational schema)
-* **AI Provider**: Google Gemini API (Planning, action extraction, risk intelligence, RAG, tool calling)
-* **Real-time (targeted)**: Socket.IO (where live updates provide critical value)
-
----
-
-## 3. Repository Structure
-
-```text
-ClubOps-AI-By-NextBuildX/
-├── client/                     # Frontend application (React + Vite + Tailwind CSS)
-│   ├── public/                 # Static assets
-│   ├── src/
-│   │   ├── assets/             # Images, fonts, media
-│   │   ├── components/         # UI components (common, layout, ui, forms, ai)
-│   │   ├── pages/              # Route pages (auth, dashboard, events, tasks, etc.)
-│   │   ├── layouts/            # Page layouts
-│   │   ├── routes/             # App routing configuration
-│   │   ├── services/           # API and AI client services
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── context/            # React context providers
-│   │   ├── store/              # State management
-│   │   ├── utils/              # Client utility functions
-│   │   ├── constants/          # Application constants
-│   │   ├── types/              # Type definitions / prop contracts
-│   │   ├── App.jsx             # Root React component
-│   │   ├── main.jsx            # Application entry point
-│   │   └── index.css           # Design tokens & Tailwind CSS
-│   ├── package.json
-│   ├── vite.config.js
-│   └── README.md
-│
-├── server/                     # Backend API server (Node.js + Express)
-│   ├── src/
-│   │   ├── config/             # App & database configurations
-│   │   ├── controllers/        # Request handlers partitioned by domain
-│   │   ├── routes/             # Express route definitions
-│   │   ├── services/           # Core domain business logic
-│   │   ├── models/             # Data models
-│   │   ├── repositories/       # Database access layer
-│   │   ├── middleware/         # Express middlewares (auth, error handler, etc.)
-│   │   ├── validators/         # Request validation schemas
-│   │   ├── utils/              # Utility helpers and loggers
-│   │   ├── db/                 # Migrations, seeds, queries
-│   │   ├── ai/                 # Gemini integrations, prompts, RAG, agents, tools
-│   │   ├── app.js              # Express app setup
-│   │   └── server.js           # Server bootstrap & listener
-│   ├── package.json
-│   ├── .env.example
-│   └── README.md
-│
-├── docs/                       # Technical specifications & documentation
-│   ├── architecture/           # System architecture diagrams & notes
-│   ├── api/                    # API contract specifications
-│   ├── database/               # Relational schemas & ER diagrams
-│   ├── ai/                     # AI prompting and agent specifications
-│   ├── rag/                    # Knowledge base and retrieval docs
-│   ├── workflows/              # End-to-end user journeys
-│   └── hackathon/              # Demo flow & PS-3 requirements tracking
-│
-├── .env.example                # Root environment variables reference
-├── .gitignore                  # Git ignore rules
-└── README.md                   # Project overview and setup instructions
-```
-
----
-
-## 4. Two-Member Development Structure
-
-To maximize productivity during the 48-hour hackathon, code ownership is split into decoupled layers:
-
-### Member 1 — Product & Frontend
-* **Primary Scope**: `client/src/` (components, pages, layouts, routes, API clients, hooks, state)
-* **Module Ownership**: Dashboard, Events, Tasks, Volunteers, Meetings UI, Documents UI, Risks UI, Announcements UI, shared UI system.
-
-### Member 2 — Backend & AI Intelligence
-* **Primary Scope**: `server/src/` (controllers, routes, services, repositories, DB, AI pipelines)
-* **Module Ownership**: Express API architecture, PostgreSQL data access, Gemini integration, action-item extraction, risk analysis, RAG pipeline, tool calling, operational agent.
-
-### Shared Interfaces
-* `docs/api/`, `docs/database/`, `README.md`, and shared environment definitions are managed with cross-team communication to keep integration contracts stable.
-
----
-
-## 5. Getting Started & Running Locally
-
-### Prerequisites
-* **Node.js**: v18+ (tested with v24+)
-* **npm**: v9+ (tested with v11+)
-* **PostgreSQL** (for subsequent phases)
-
----
-
-### Step 1: Environment Configuration
-
-Copy the example environment files:
-
-```bash
-# In the root directory (or server directory)
-cp .env.example server/.env
-```
-
-Ensure environment variables are configured with your development values:
-- `PORT` (default: 5000)
-- `CLIENT_URL` (default: http://localhost:5173)
-- `DATABASE_URL` (PostgreSQL connection string)
-- `JWT_SECRET` (Authentication signing secret)
-- `GEMINI_API_KEY` (Google Gemini API key)
-
----
-
-### Step 2: Install Dependencies
-
-#### Client
-```bash
-cd client
-npm install
-```
-
-#### Server
-```bash
-cd ../server
-npm install
-```
-
----
-
-### Step 3: Run the Development Servers
-
-#### Start Frontend (Vite)
-```bash
-cd client
-npm run dev
-```
-Client starts on `http://localhost:5173`.
-
-#### Start Backend (Express)
-```bash
-cd server
-npm run dev
-```
-Server starts on `http://localhost:5000`. Health check endpoint available at:  
-`http://localhost:5000/health`

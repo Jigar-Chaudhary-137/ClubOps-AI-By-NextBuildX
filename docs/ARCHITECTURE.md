@@ -1,128 +1,85 @@
-﻿# ClubOps AI — System Architecture
+# ClubOps AI — System Architecture
 
 ## Overview
 
-ClubOps AI is a multi-tenant, AI-native event operations platform. The system comprises a React 18 frontend (Vite), an Express 4.x REST API backend, MongoDB for persistence, and a fully self-contained AI subsystem powered by Google Gemini 1.5 Flash.
+ClubOps AI is a multi-tenant, AI-assisted operations platform built specifically for college clubs. The platform consists of a **React 18 + Vite** frontend, a **Node.js + Express.js** REST API backend, **MongoDB** for persistent storage, and an **AI Subsystem** powered by Google Gemini and Retrieval-Augmented Generation (RAG).
+
+---
+
+## High-Level Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       ClubOps AI Platform                        │
+├──────────────────────────────┬──────────────────────────────────┤
+│         Frontend             │           Backend                 │
+│   React 18 + Vite            │   Node.js + Express.js            │
+│   Tailwind CSS + Recharts    │   MongoDB (Mongoose ODM)          │
+│   React Router v6            │   JWT Authentication + RBAC       │
+│   Axios API Client Layer     │   Multer File Processing Layer    │
+└──────────────────────────────┴──────────────────────────────────┘
+                                │
+        ┌───────────────────────┼────────────────────────┐
+        │                       │                        │
+ ┌──────┴──────┐         ┌──────┴──────┐          ┌──────┴──────┐
+ │  AI Layer   │         │  RAG Engine │          │   Realtime  │
+ │ Gemini AI   │         │ Chunker     │          │ Server-Sent │
+ │ Function    │         │ Embeddings  │          │ Events (SSE)│
+ │ Calling     │         │ VectorStore │          │ Broadcasts  │
+ └─────────────┘         └─────────────┘          └─────────────┘
+```
 
 ---
 
 ## Request Lifecycle
 
 ```
-Browser → React (Vite:5173)
-       → Axios API Client (/api/*)
-       → Vite Proxy → Express (localhost:5000)
-       → Helmet / CORS / Morgan
-       → JWT Auth Middleware
-       → RBAC Middleware
-       → Club Isolation Middleware (injects {club: req.user.club})
-       → Route Handler (Controller)
-       → Service Layer
-       → Mongoose / MongoDB
+Browser / Client (Vite:5173)
+       ↓
+Axios API Client (`/api/*`)
+       ↓
+Express Server (localhost:5000)
+       ↓
+Helmet Security Headers & CORS
+       ↓
+JWT Authentication Middleware (`auth.middleware.js`)
+       ↓
+RBAC Authorization Middleware (`rbac.middleware.js`)
+       ↓
+Tenant Isolation (injects `{ club: req.user.club }`)
+       ↓
+Controller → Service Layer
+       ↓
+MongoDB (Mongoose Models) / Gemini AI Subsystem
+       ↓
+Standardized JSON Response (`{ success, message, data }`)
 ```
 
 ---
 
-## Data Models (12 Collections)
+## Core Data Models
 
-| Model | Key Fields | Purpose |
-|-------|-----------|---------|
-| `User` | email, password, role, club | Auth & membership |
-| `Club` | name, code, members | Multi-tenant root |
-| `Event` | title, status, venue, dates | Event lifecycle |
-| `Task` | title, status, priority, assignedTo | Task tracking |
-| `Volunteer` | name, department, skills, availability | Volunteer registry |
-| `Meeting` | title, transcript, actionItems | Meeting intelligence |
-| `Risk` | title, severity, probability, mitigation | Risk register |
-| `Document` | title, chunks[], embeddings[], ingestionStatus | RAG knowledge base |
-| `Announcement` | title, content, audience, priority | Broadcast management |
-| `Notification` | type, recipient, message, read | In-app notifications |
-| `BroadcastDelivery` | announcement, channel, status | Delivery audit trail |
-
----
-
-## Multi-Tenancy Isolation
-
-Every authenticated request carries `req.user.club` (MongoDB ObjectId). The club isolation middleware automatically injects `{ club: req.user.club }` into every DB query.
-
-- **Query isolation:** Cross-club data access is architecturally impossible
-- **RAG isolation:** Vector searches are scoped per-club via `clubId` filter
-- **Agent isolation:** The Operations Agent only accesses data within the authenticated club
+| Model | Source of Truth For | Description |
+|---|---|---|
+| `User` | Name, Email, Phone, WhatsApp, Role, Club | User identity and primary contact info |
+| `Club` | Name, Code, Settings | Multi-tenant club root |
+| `Event` | Title, Status, Dates, Venue, Attendees | Event lifecycle tracking |
+| `Task` | Title, Priority, Status, Assignee, Due Date | Actionable work items |
+| `Volunteer` | Availability, Skills, Department, Assigned Tasks | Volunteer registry referencing User |
+| `Meeting` | Title, Date, Attendees, Transcript, Action Items | Meeting intelligence |
+| `Risk` | Title, Severity, Probability, Mitigation Plan | Operational risk register |
+| `Document` | File, Chunks, Embeddings, Ingestion Status | RAG knowledge base |
+| `Announcement` | Title, Content, Target Audiences, Priority | Multi-channel broadcast |
+| `BroadcastDelivery`| Channel, Recipient, Phone, Delivery Status | Multi-channel delivery audit trail |
+| `Notification` | Recipient, Club, Type, Title, Read Status | In-app notification records |
 
 ---
 
-## Authentication Flow
+## Security & Multi-Tenant Isolation
 
-```
-POST /api/auth/login
-  → bcryptjs password compare
-  → JWT signed (HS256, configurable expiry)
-  → Token stored client-side
-
-Protected routes:
-  → Authorization: Bearer <JWT>
-  → auth.middleware.js decodes token
-  → req.user = { id, club, role }
-  → rbac.middleware.js checks permissions
-```
-
-**Roles:** `admin` (full access) · `organizer` (full club access) · `volunteer` (read + own tasks)
-
----
-
-## Real-Time SSE Architecture
-
-Native Node.js Server-Sent Events without Socket.io:
-
-```
-GET /api/notifications/stream
-  → SSE connection established per authenticated client
-  → In-memory client registry (keyed by clubId)
-  → 30s heartbeat ping keeps connections alive
-  → Auto-cleanup on client disconnect
-
-notification.service.js:
-  → emit(clubId, type, payload)
-  → Broadcasts to all SSE clients in that club
-```
-
----
-
-## Document Ingestion Pipeline
-
-```
-POST /api/documents (multipart/form-data)
-  → Multer: stores file buffer in memory
-  → parser.js: PDF (pdf-parse) or DOCX (mammoth) → plain text
-  → chunker.js: sliding window 512 tokens / 50 token overlap
-  → embeddings.js: Gemini text-embedding-004 (768-dim vectors)
-                   OR deterministic DJB2+trigram fallback
-  → vectorStore.js: chunks[] persisted in Document MongoDB doc
-  → ingestionStatus: pending → processing → processed
-```
-
----
-
-## AI Operations Agent Flow
-
-```
-POST /api/ai/agent/chat { message, dryRun, eventId }
-  → operationsAgent.js initializes Gemini session
-  → Gemini 1.5 Flash function-calling mode
-  → Agent selects from 10 registered tool declarations
-  → dryRun=true: returns planned action for human review
-  → dryRun=false: toolExecutors.js performs DB mutation
-  → Multi-turn conversation with persisted history
-```
-
----
-
-## Security Layers
-
-1. **Helmet.js** — HTTP security headers (XSS, clickjacking, HSTS)
-2. **CORS** — Configurable origin allowlist
-3. **JWT** — HS256 signed, expiry-checked on every request
-4. **RBAC** — Role-checked per route handler
-5. **Club Isolation** — Automatic query scoping, no bypass possible
-6. **Agent Dry-Run** — All mutations preview before execution
-7. **Schema Validation** — All 12 Mongoose models have strict validation
+1. **Club-Level Data Scoping:** Every query executed in the application is strictly filtered by the authenticated user's `clubId`. Cross-tenant data leaks are structurally prevented.
+2. **Contact Info Truth:** Contact numbers (`phone`, `whatsappNumber`) are stored securely on the `User` profile and normalized to E.164 (`+91...`).
+3. **Backend-Only AI Secrets:** The Gemini API key and provider credentials remain exclusively on the server.
+4. **Human-in-the-Loop Safety Boundary:** When the AI Operations Agent plans database modifications, it generates a dry-run proposal. The change is only committed after the organizer explicitly confirms it.
+5. **Role-Based Access Control (RBAC):** Access tiers (`admin`, `organizer`, `volunteer`, `member`) dictate administrative privileges.
+6. **Native Real-Time SSE:** Server-Sent Events deliver live notifications without introducing external socket dependencies.
