@@ -24,8 +24,8 @@ export default function DocumentActivity({
           <div className="py-6 sm:py-8">
             <EmptyState
               icon={<Activity className="w-7 h-7 text-[#818CF8]" />}
-              title="Document activity will appear once connected."
-              description="Ingestion, metadata edits, and vector indexing operations will be logged here in the integration phase."
+              title="No recent document activity"
+              description="Ingestion, metadata edits, and vector indexing operations will be logged here."
             />
           </div>
         ) : (

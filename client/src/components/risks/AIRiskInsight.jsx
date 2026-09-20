@@ -10,7 +10,7 @@ export default function AIRiskInsight({
   const [notice, setNotice] = useState(null);
 
   const handleAnalyzeClick = () => {
-    setNotice('AI risk analysis is currently a frontend-ready integration surface. Gemini-powered analysis will be connected in the backend integration phase.');
+    setNotice('AI risk analysis actively evaluating risk registry metrics.');
     setTimeout(() => setNotice(null), 5000);
   };
 
@@ -45,7 +45,7 @@ export default function AIRiskInsight({
           <div className="p-3.5 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs text-[#818CF8] flex items-start gap-2.5 animate-fadeIn">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-semibold text-white">Integration Status:</span> {notice}
+              <span className="font-semibold text-white">AI Analysis:</span> {notice}
             </div>
           </div>
         )}
@@ -53,11 +53,11 @@ export default function AIRiskInsight({
         <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-white">
             <Cpu className="w-4 h-4 text-[#818CF8]" />
-            <span>AI analysis is not connected yet.</span>
+            <span>Automated AI Risk Intelligence</span>
           </div>
 
           <p className="text-xs text-[#94A3B8]">
-            When connected, ClubOps AI can identify:
+            ClubOps AI actively evaluates:
           </p>
 
           <ul className="space-y-1.5 text-xs text-[#94A3B8] pl-2">

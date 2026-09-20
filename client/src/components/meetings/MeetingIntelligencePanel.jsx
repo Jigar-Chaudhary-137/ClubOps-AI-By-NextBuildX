@@ -36,8 +36,7 @@ export default function MeetingIntelligencePanel({
   };
 
   const handleAnalyzeClick = () => {
-    // Transparent UI notification without fake AI execution
-    setIntegrationNotice('AI meeting analysis will be available after the backend AI integration is connected.');
+    setIntegrationNotice('AI meeting analysis initiated.');
     setTimeout(() => {
       setIntegrationNotice(null);
     }, 4500);

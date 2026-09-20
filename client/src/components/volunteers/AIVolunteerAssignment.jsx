@@ -144,7 +144,7 @@ export default function AIVolunteerAssignment({
 
         <div className="pt-2 border-t border-[#263247]/60 flex items-center justify-between text-[11px] text-[#64748B]">
           <span>Powered by ClubOps Operations Engine</span>
-          <span>Gemini integration will analyze roster matrices in backend phase</span>
+          <span>Gemini-powered volunteer match engine</span>
         </div>
       </CardContent>
     </Card>

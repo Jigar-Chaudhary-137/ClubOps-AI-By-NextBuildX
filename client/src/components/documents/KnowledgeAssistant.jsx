@@ -20,7 +20,7 @@ export default function KnowledgeAssistant({
   const handleAsk = (queryText) => {
     const textToAsk = queryText || question;
     if (!textToAsk.trim()) return;
-    setNotice('AI knowledge assistance will be available after RAG integration.');
+    setNotice('Processing query with ClubOps AI Knowledge Assistant...');
     setTimeout(() => setNotice(null), 4500);
     onAsk?.(textToAsk);
   };

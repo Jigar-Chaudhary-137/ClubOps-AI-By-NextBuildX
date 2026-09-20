@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { UserPlus, Sparkles, Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Sparkles, Plus, AlertCircle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 import SkillTag from './SkillTag';
+import { createVolunteer } from '../../services/api/volunteers';
 
 const roleOptions = [
   { value: 'Volunteer', label: 'Volunteer' },
@@ -30,7 +31,7 @@ const preferredEventTypeOptions = [
   { value: 'Other', label: 'Other' }
 ];
 
-export default function AddVolunteerModal({ isOpen, onClose }) {
+export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -45,7 +46,7 @@ export default function AddVolunteerModal({ isOpen, onClose }) {
   const [skillInput, setSkillInput] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [integrationNotice, setIntegrationNotice] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -94,22 +95,30 @@ export default function AddVolunteerModal({ isOpen, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
+    setApiError(null);
 
-    // Simulate validation pass without pretending MongoDB persistence
-    setTimeout(() => {
+    try {
+      const payload = {
+        ...formData,
+        skills
+      };
+      let result;
+      if (onSave) {
+        result = await onSave(payload);
+      } else {
+        result = await createVolunteer(payload);
+      }
+      handleModalClose();
+    } catch (err) {
+      setApiError(err.response?.data?.message || err.message || 'Failed to create volunteer');
+    } finally {
       setIsSubmitting(false);
-      setIntegrationNotice(true);
-
-      setTimeout(() => {
-        setIntegrationNotice(false);
-        handleModalClose();
-      }, 2000);
-    }, 450);
+    }
   };
 
   const handleModalClose = () => {
@@ -126,7 +135,7 @@ export default function AddVolunteerModal({ isOpen, onClose }) {
     setSkillInput('');
     setErrors({});
     setIsSubmitting(false);
-    setIntegrationNotice(false);
+    setApiError(null);
     onClose?.();
   };
 
@@ -157,29 +166,17 @@ export default function AddVolunteerModal({ isOpen, onClose }) {
               onClick={handleSubmit}
               isLoading={isSubmitting}
             >
-              Validate & Continue
+              Add Volunteer
             </Button>
           </div>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Backend Integration Info Banner */}
-        <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] text-xs text-[#94A3B8] leading-relaxed flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-[#8B5CF6] shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Integration Status:</span>{' '}
-            Volunteer creation will be connected to the backend in the next integration phase. Local validation and interface state are active.
-          </div>
-        </div>
-
-        {/* Transparent notice on valid submission */}
-        {integrationNotice && (
-          <div className="p-3 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs text-[#818CF8] flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-[#818CF8]" />
-            <span>
-              Volunteer creation will be connected to the backend in the next integration phase.
-            </span>
+        {apiError && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
           </div>
         )}
 

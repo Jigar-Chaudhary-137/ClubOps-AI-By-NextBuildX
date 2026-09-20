@@ -36,7 +36,7 @@ export default function MeetingDetailsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Top Navigation & Breadcrumbs */}
+      {/* Top Navigation & Breadcrumb */}
       <div className="flex items-center justify-between gap-4">
         <Link
           to="/meetings"
@@ -48,25 +48,7 @@ export default function MeetingDetailsPage() {
 
         <div className="flex items-center gap-2">
           <Badge variant="neutral">ID: {meetingId}</Badge>
-          <Badge variant="primary" dot>Awaiting Integration</Badge>
         </div>
-      </div>
-
-      {/* Backend Integration Info Banner */}
-      <div className="p-3.5 rounded-xl bg-[#151D2E] border border-[#263247] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#94A3B8]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
-            <AlertCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-white">Meeting Intelligence Workspace:</span>{' '}
-            Meeting #{meetingId} will be dynamically loaded in the next backend integration phase. AI extraction pipeline is ready.
-          </div>
-        </div>
-
-        <span className="text-[11px] font-mono text-[#64748B]">
-          Frontend Phase 6
-        </span>
       </div>
 
       {/* Header Card */}

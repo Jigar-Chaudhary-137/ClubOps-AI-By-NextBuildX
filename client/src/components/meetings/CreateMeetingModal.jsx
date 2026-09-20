@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Users, Sparkles, X, Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Sparkles, X, Plus, AlertCircle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
+import { createMeeting } from '../../services/api/meetings';
 
 const meetingTypeOptions = [
   { value: 'Planning', label: 'Planning' },
@@ -20,7 +21,7 @@ const eventOptions = [
   { value: 'none', label: 'None / Standalone' }
 ];
 
-export default function CreateMeetingModal({ isOpen, onClose }) {
+export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: '',
     event: '',
@@ -37,7 +38,7 @@ export default function CreateMeetingModal({ isOpen, onClose }) {
   const [participantInput, setParticipantInput] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationSuccessNote, setValidationSuccessNote] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -69,31 +70,42 @@ export default function CreateMeetingModal({ isOpen, onClose }) {
 
   const validate = () => {
     const newErrors = {};
+
     if (!formData.title.trim()) {
-      newErrors.title = 'Meeting Title is required';
+      newErrors.title = 'Meeting title is required';
     }
+
     if (!formData.date) {
-      newErrors.date = 'Meeting Date is required';
+      newErrors.date = 'Date is required';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate local validation
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setValidationSuccessNote(true);
+    setApiError(null);
 
-      setTimeout(() => {
-        setValidationSuccessNote(false);
-        handleModalClose();
-      }, 2400);
-    }, 500);
+    try {
+      const payload = {
+        ...formData,
+        attendees: participants
+      };
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        await createMeeting(payload);
+      }
+      handleModalClose();
+    } catch (err) {
+      setApiError(err.response?.data?.message || err.message || 'Failed to create meeting');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalClose = () => {
@@ -112,7 +124,7 @@ export default function CreateMeetingModal({ isOpen, onClose }) {
     setParticipantInput('');
     setErrors({});
     setIsSubmitting(false);
-    setValidationSuccessNote(false);
+    setApiError(null);
     onClose?.();
   };
 
@@ -150,19 +162,10 @@ export default function CreateMeetingModal({ isOpen, onClose }) {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Backend Integration Info Banner */}
-        <div className="p-3 rounded-lg bg-[#111827] border border-[#263247] text-xs text-[#94A3B8] leading-relaxed flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-[#8B5CF6] shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-white">Integration Status:</span>{' '}
-            Meeting creation will be connected to the backend in the next integration phase. Local validation is fully operational.
-          </div>
-        </div>
-
-        {validationSuccessNote && (
-          <div className="p-3 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#4ADE80] flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Meeting creation will be connected to the backend in the next integration phase.</span>
+        {apiError && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{apiError}</span>
           </div>
         )}
 

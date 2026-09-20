@@ -111,8 +111,12 @@ export default function VolunteerDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
+<<<<<<< HEAD
           <Badge variant="neutral">ID: #{volunteer._id?.substring(0, 8)}</Badge>
           <Badge variant="primary" dot>MongoDB Connected</Badge>
+=======
+          <Badge variant="neutral">Volunteer ID: #{volunteerId}</Badge>
+>>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
         </div>
       </div>
 

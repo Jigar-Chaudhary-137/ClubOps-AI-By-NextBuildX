@@ -4,14 +4,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  LogOut,
-  Sliders,
   ShieldCheck,
   X
 } from 'lucide-react';
 import { NAVIGATION_ITEMS } from '../../constants/navigation';
 import Avatar from '../ui/Avatar';
 import Tooltip from '../ui/Tooltip';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar({
   isCollapsed = false,
@@ -19,6 +18,11 @@ export default function Sidebar({
   isMobileOpen = false,
   onMobileClose
 }) {
+  const { user } = useAuth();
+
+  const userName = user?.name || 'Club Lead';
+  const userRole = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Organizer';
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -144,15 +148,15 @@ export default function Sidebar({
               ${isCollapsed && !isMobileOpen ? 'justify-center p-1' : 'bg-[#151D2E]/70 border border-[#263247]/50'}
             `}
           >
-            <Avatar name="Organizer" size="sm" status="online" />
+            <Avatar name={userName} size="sm" status="online" />
             {(!isCollapsed || isMobileOpen) && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-[#F8FAFC] truncate">
-                  Club Lead
+                  {userName}
                 </p>
                 <div className="flex items-center gap-1 text-[11px] text-[#94A3B8]">
                   <ShieldCheck className="w-3 h-3 text-[#22C55E]" />
-                  <span className="truncate">Organizer</span>
+                  <span className="truncate">{userRole}</span>
                 </div>
               </div>
             )}
