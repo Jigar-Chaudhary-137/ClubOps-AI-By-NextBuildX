@@ -15,20 +15,19 @@ const roleOptions = [
 ];
 
 const availabilityOptions = [
-  { value: 'Available', label: 'Available' },
-  { value: 'Busy', label: 'Busy' },
-  { value: 'Unavailable', label: 'Unavailable' }
+  { value: 'available', label: 'Available' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'busy', label: 'Busy' },
+  { value: 'unavailable', label: 'Unavailable' }
 ];
 
-const preferredEventTypeOptions = [
-  { value: '', label: 'Select Preferred Event Type (Optional)' },
-  { value: 'Workshop', label: 'Workshop' },
-  { value: 'Hackathon', label: 'Hackathon' },
-  { value: 'Seminar', label: 'Seminar' },
-  { value: 'Competition', label: 'Competition' },
-  { value: 'Cultural', label: 'Cultural' },
-  { value: 'Technical', label: 'Technical' },
-  { value: 'Other', label: 'Other' }
+const departmentOptions = [
+  { value: 'General', label: 'General Operations' },
+  { value: 'Technical', label: 'Technical & Development' },
+  { value: 'Logistics', label: 'Logistics & Venue' },
+  { value: 'Design', label: 'Design & Media' },
+  { value: 'Marketing', label: 'Marketing & Outreach' },
+  { value: 'Sponsorship', label: 'Sponsorship & Finance' }
 ];
 
 export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
@@ -37,8 +36,8 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
     email: '',
     phone: '',
     role: 'Volunteer',
-    availability: 'Available',
-    preferredEventType: '',
+    department: 'General',
+    availability: 'available',
     notes: ''
   });
 
@@ -104,8 +103,14 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
 
     try {
       const payload = {
-        ...formData,
-        skills
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        role: formData.role,
+        department: formData.department || 'General',
+        availability: formData.availability,
+        skills,
+        notes: formData.notes.trim()
       };
       let result;
       if (onSave) {
@@ -127,8 +132,8 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
       email: '',
       phone: '',
       role: 'Volunteer',
-      availability: 'Available',
-      preferredEventType: '',
+      department: 'General',
+      availability: 'available',
       notes: ''
     });
     setSkills([]);
@@ -222,7 +227,7 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
           />
         </div>
 
-        {/* Availability & Preferred Event Type */}
+        {/* Availability & Department */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Availability"
@@ -233,10 +238,10 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
           />
 
           <Select
-            label="Preferred Event Type"
-            options={preferredEventTypeOptions}
-            value={formData.preferredEventType}
-            onChange={(e) => handleChange('preferredEventType', e.target.value)}
+            label="Department / Area"
+            options={departmentOptions}
+            value={formData.department}
+            onChange={(e) => handleChange('department', e.target.value)}
             disabled={isSubmitting}
           />
         </div>

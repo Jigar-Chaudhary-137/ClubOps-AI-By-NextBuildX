@@ -2,9 +2,30 @@ import React from 'react';
 import Badge from '../ui/Badge';
 
 const availabilityMap = {
+  available: {
+    variant: 'success',
+    label: 'Available'
+  },
+  assigned: {
+    variant: 'primary',
+    label: 'Assigned'
+  },
+  busy: {
+    variant: 'warning',
+    label: 'Busy'
+  },
+  unavailable: {
+    variant: 'danger',
+    label: 'Unavailable'
+  },
+  // Fallbacks for uppercase/capitalized inputs
   Available: {
     variant: 'success',
     label: 'Available'
+  },
+  Assigned: {
+    variant: 'primary',
+    label: 'Assigned'
   },
   Busy: {
     variant: 'warning',
@@ -17,11 +38,12 @@ const availabilityMap = {
 };
 
 export default function VolunteerAvailabilityBadge({
-  availability = 'Available',
+  availability = 'available',
   size = 'md',
   className = ''
 }) {
-  const config = availabilityMap[availability] || {
+  const normKey = (availability || 'available').toString().trim().toLowerCase();
+  const config = availabilityMap[normKey] || availabilityMap[availability] || {
     variant: 'neutral',
     label: availability || 'Unknown'
   };
@@ -37,3 +59,4 @@ export default function VolunteerAvailabilityBadge({
     </Badge>
   );
 }
+

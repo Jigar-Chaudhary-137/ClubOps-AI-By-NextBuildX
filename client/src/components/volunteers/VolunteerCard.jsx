@@ -20,7 +20,7 @@ export default function VolunteerCard({
     role = 'Volunteer',
     email = '',
     phone = '',
-    availability = 'Available',
+    availability = 'available',
     skills = [],
     assignedEvent = null,
     workload = null
@@ -28,8 +28,9 @@ export default function VolunteerCard({
 
   // Map availability to avatar status dot
   const getAvatarStatus = (status) => {
-    if (status === 'Available') return 'online';
-    if (status === 'Busy') return 'busy';
+    const s = (status || '').toString().toLowerCase();
+    if (s === 'available') return 'online';
+    if (s === 'busy' || s === 'assigned') return 'busy';
     return 'offline';
   };
 

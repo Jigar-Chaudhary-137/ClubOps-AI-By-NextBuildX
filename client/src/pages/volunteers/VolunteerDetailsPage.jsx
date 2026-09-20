@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   User,
@@ -15,91 +15,43 @@ import {
   Activity,
   Layers,
   Wrench,
-  CheckCircle2
+  CheckCircle2,
+  FolderSync
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
+import Toast from '../../components/ui/Toast';
 import { AIBadge, AIIcon } from '../../components/ai';
 import {
   VolunteerAvailabilityBadge,
   VolunteerWorkload,
   VolunteerAssignmentPanel,
-  AddVolunteerModal
+  AddVolunteerModal,
+  SkillTag
 } from '../../components/volunteers';
-import { getVolunteerById, deleteVolunteer } from '../../services/api/volunteers';
 
 export default function VolunteerDetailsPage() {
   const { volunteerId } = useParams();
-  const navigate = useNavigate();
-  const [volunteer, setVolunteer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignPanelOpen, setIsAssignPanelOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadVolunteer() {
-      if (!volunteerId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await getVolunteerById(volunteerId);
-        if (res?.data) {
-          setVolunteer(res.data);
-        }
-      } catch (err) {
-        console.error('Error fetching volunteer details:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to load volunteer profile');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadVolunteer();
-  }, [volunteerId]);
-
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to remove this volunteer?')) return;
-    try {
-      await deleteVolunteer(volunteerId);
-      navigate('/volunteers');
-    } catch (err) {
-      console.error('Failed to delete volunteer:', err);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-slate-400">Loading volunteer profile from MongoDB...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !volunteer) {
-    return (
-      <div className="max-w-4xl mx-auto py-10 space-y-4">
-        <Link to="/volunteers" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back to Volunteers
-        </Link>
-        <Card className="border-rose-500/30 bg-rose-500/10">
-          <CardContent className="p-6 text-center space-y-2">
-            <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
-            <h3 className="text-base font-semibold text-white">Volunteer Not Found</h3>
-            <p className="text-xs text-rose-200">{error || 'The requested volunteer record does not exist.'}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Toast
+            type={toast.type}
+            title={toast.title}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        </div>
+      )}
+
       {/* Top Navigation & Breadcrumb */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -111,14 +63,22 @@ export default function VolunteerDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-<<<<<<< HEAD
-          <Badge variant="neutral">ID: #{volunteer._id?.substring(0, 8)}</Badge>
-          <Badge variant="primary" dot>MongoDB Connected</Badge>
-=======
           <Badge variant="neutral">Volunteer ID: #{volunteerId}</Badge>
->>>>>>> e0f1a22667099e4213ef11bc70c54c319f69a33c
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchVolunteer}>
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Volunteer Header Profile Card */}
       <Card className="border-[#263247] bg-[#151D2E] shadow-xl">
@@ -126,21 +86,21 @@ export default function VolunteerDetailsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <Avatar
-                name={volunteer.name}
+                name="—"
                 size="lg"
-                status="online"
+                status="offline"
                 className="w-14 h-14"
               />
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                    {volunteer.name}
+                    —
                   </h1>
-                  <Badge variant="neutral">{volunteer.role || 'Volunteer'}</Badge>
-                  <VolunteerAvailabilityBadge availability={volunteer.availability || 'Available'} size="sm" />
+                  <Badge variant="neutral">—</Badge>
+                  <VolunteerAvailabilityBadge availability="—" size="sm" />
                 </div>
                 <p className="text-xs text-[#94A3B8]">
-                  Club Member &bull; {volunteer.department || 'Operations Team'}
+                  Club Member & Operational Volunteer Profile
                 </p>
               </div>
             </div>
@@ -169,6 +129,15 @@ export default function VolunteerDetailsPage() {
         </CardContent>
       </Card>
 
+      {/* Optional In-Page Event Assignment Panel */}
+      {isAssignPanelOpen && (
+        <VolunteerAssignmentPanel
+          volunteerId={volunteerId}
+          volunteerName="this volunteer"
+          onAssignmentComplete={() => setIsAssignPanelOpen(false)}
+        />
+      )}
+
       {/* Main Details & Information Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Columns: Profile Overview, Skills, Assignments, Activity */}
@@ -191,15 +160,15 @@ export default function VolunteerDetailsPage() {
                     <User className="w-3.5 h-3.5 text-[#818CF8]" />
                     <span>Full Name</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">{volunteer.name}</p>
+                  <p className="text-sm font-semibold text-white mt-1">—</p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
                   <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
                     <ShieldCheck className="w-3.5 h-3.5 text-[#6366F1]" />
-                    <span>Role</span>
+                    <span>Role / Department</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1 capitalize">{volunteer.role || 'Volunteer'}</p>
+                  <p className="text-sm font-semibold text-white mt-1">—</p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -207,7 +176,7 @@ export default function VolunteerDetailsPage() {
                     <Mail className="w-3.5 h-3.5 text-[#34D399]" />
                     <span>Email Address</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">{volunteer.email}</p>
+                  <p className="text-sm font-semibold text-white mt-1">—</p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -215,7 +184,15 @@ export default function VolunteerDetailsPage() {
                     <Phone className="w-3.5 h-3.5 text-[#F59E0B]" />
                     <span>Phone Number</span>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">{volunteer.phone || 'Not specified'}</p>
+                  <p className="text-sm font-semibold text-white mt-1">—</p>
+                </div>
+
+                <div className="col-span-1 sm:col-span-2 p-3 rounded-lg bg-[#111827] border border-[#263247]">
+                  <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+                    <Clock className="w-3.5 h-3.5 text-[#A78BFA]" />
+                    <span>Availability Status</span>
+                  </div>
+                  <p className="text-sm font-semibold text-white mt-1">—</p>
                 </div>
               </div>
             </CardContent>
@@ -233,26 +210,74 @@ export default function VolunteerDetailsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {volunteer.skills && volunteer.skills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {volunteer.skills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-medium"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+              <EmptyState
+                icon={<Wrench className="w-6 h-6 text-[#38BDF8]" />}
+                title="Skills will appear once volunteer data is connected."
+                description="Technical, creative, and organizational skills will be listed here from the database."
+              />
+            </CardContent>
+          </Card>
+
+          {/* 3. Event Assignments Section */}
+          <Card className="border-[#263247]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#4ADE80]" />
+                <div>
+                  <CardTitle>Event Assignments</CardTitle>
+                  <CardDescription>Active and scheduled club event participations</CardDescription>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400">No skills tagged yet.</p>
-              )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<Calendar className="w-6 h-6 text-[#4ADE80]" />}
+                title="No event assignments available yet."
+                description="Assigned events and team responsibilities will be displayed here once connected."
+              />
+            </CardContent>
+          </Card>
+
+          {/* 4. Activity Section */}
+          <Card className="border-[#263247]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[#64748B]" />
+                <div>
+                  <CardTitle>Activity History</CardTitle>
+                  <CardDescription>Log of assignments, updates, and interactions</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <EmptyState
+                icon={<Clock className="w-6 h-6 text-[#818CF8]" />}
+                title="Volunteer activity will appear once connected to the backend."
+                description="Audit history and operational changes will synchronize dynamically."
+              />
             </CardContent>
           </Card>
         </div>
 
         {/* Right Column: AI Assignment Copilot */}
         <div className="space-y-6">
+          {/* Current Workload Card */}
+          <Card className="border-[#263247]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#F59E0B]" />
+                <div>
+                  <CardTitle>Current Workload</CardTitle>
+                  <CardDescription>Capacity and active task distribution</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <VolunteerWorkload workload={null} />
+            </CardContent>
+          </Card>
+
+          {/* AI Volunteer Copilot Card */}
           <Card className="border-[#8B5CF6]/30 bg-gradient-to-b from-[#171A2E]/90 to-[#151D2E] shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between w-full">
@@ -271,16 +296,39 @@ export default function VolunteerDetailsPage() {
                 Ask the Operations Agent to assign pending event tasks matching {volunteer.name}'s skill profile:
               </p>
 
-              <Link to="/ai" className="block">
-                <Button
-                  variant="ai"
-                  size="sm"
-                  className="w-full justify-start text-xs"
-                  leftIcon={<Sparkles className="w-3.5 h-3.5" />}
-                >
-                  Match Tasks with Agent
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
+                leftIcon={<Sparkles className="w-3.5 h-3.5 text-[#818CF8]" />}
+                disabled
+              >
+                Recommend Matching Events
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
+                leftIcon={<Layers className="w-3.5 h-3.5 text-[#34D399]" />}
+                disabled
+              >
+                Analyze Workload Balance
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-xs border-[#263247] hover:border-[#8B5CF6]/40 text-[#F8FAFC]"
+                leftIcon={<Wrench className="w-3.5 h-3.5 text-[#38BDF8]" />}
+                disabled
+              >
+                Suggest Skill Development
+              </Button>
+
+              <div className="pt-3 mt-1 border-t border-[#263247]/60 text-[11px] text-[#64748B]">
+                AI volunteer matching will connect to Gemini in later backend phases.
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -290,7 +338,9 @@ export default function VolunteerDetailsPage() {
       <AddVolunteerModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+        onSave={handleUpdate}
       />
     </div>
   );
 }
+

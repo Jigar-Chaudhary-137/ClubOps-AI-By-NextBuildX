@@ -17,7 +17,7 @@ export default function VolunteerRow({
     name = 'Unnamed Volunteer',
     role = 'Volunteer',
     email = '',
-    availability = 'Available',
+    availability = 'available',
     skills = [],
     assignedEvent = null,
     workload = null,
@@ -25,8 +25,9 @@ export default function VolunteerRow({
   } = volunteer;
 
   const getAvatarStatus = (status) => {
-    if (status === 'Available') return 'online';
-    if (status === 'Busy') return 'busy';
+    const s = (status || '').toString().toLowerCase();
+    if (s === 'available') return 'online';
+    if (s === 'busy' || s === 'assigned') return 'busy';
     return 'offline';
   };
 
