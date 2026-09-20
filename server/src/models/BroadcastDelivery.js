@@ -38,19 +38,43 @@ const broadcastDeliverySchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['queued', 'sent', 'delivered', 'failed', 'simulated', 'skipped', 'not_configured'],
+        values: ['pending', 'accepted', 'sent', 'delivered', 'failed', 'skipped', 'not_configured', 'simulated', 'queued'],
         message: '{VALUE} is not a valid broadcast delivery status'
       },
-      default: 'queued',
+      default: 'pending',
       index: true
     },
+    provider: {
+      type: String,
+      default: null
+    },
+    destinationType: {
+      type: String,
+      default: null
+    },
     providerMessageId: {
+      type: String,
+      default: null
+    },
+    errorCode: {
+      type: String,
+      default: null
+    },
+    errorMessage: {
       type: String,
       default: null
     },
     error: {
       type: String,
       default: null
+    },
+    attemptCount: {
+      type: Number,
+      default: 1
+    },
+    lastAttemptAt: {
+      type: Date,
+      default: Date.now
     },
     metadata: {
       type: mongoose.Schema.Types.Mixed,

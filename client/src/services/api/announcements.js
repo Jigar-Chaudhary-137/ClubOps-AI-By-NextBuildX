@@ -30,8 +30,13 @@ export async function deleteAnnouncement(id) {
   return response.data;
 }
 
-export async function publishAnnouncement(id) {
-  const response = await apiClient.post(`/announcements/${id}/broadcast`);
+export async function publishAnnouncement(id, options = {}) {
+  const response = await apiClient.post(`/announcements/${id}/broadcast`, options);
+  return response.data;
+}
+
+export async function broadcastAnnouncement(id, channels, deliveryMode) {
+  const response = await apiClient.post(`/announcements/${id}/broadcast`, { channels, deliveryMode });
   return response.data;
 }
 
@@ -75,13 +80,23 @@ export async function getClubMembers() {
   return response.data;
 }
 
-export async function getAnnouncementDeliveryStats(id) {
-  const response = await apiClient.get(`/announcements/${id}`);
+export async function getProviderHealthStatus() {
+  const response = await apiClient.get('/announcements/providers/status');
   return response.data;
 }
 
-export async function getAnnouncementActivity(id) {
-  const response = await apiClient.get(`/announcements/${id}`);
+export async function sendControlledTest(data) {
+  const response = await apiClient.post('/announcements/providers/test', data);
+  return response.data;
+}
+
+export async function registerDeviceToken(token, platform = 'web') {
+  const response = await apiClient.post('/notifications/register-device', { token, platform });
+  return response.data;
+}
+
+export async function updateNotificationPreferences(preferences) {
+  const response = await apiClient.patch('/notifications/preferences', preferences);
   return response.data;
 }
 
@@ -92,6 +107,7 @@ export const announcementsService = {
   updateAnnouncement,
   deleteAnnouncement,
   publishAnnouncement,
+  broadcastAnnouncement,
   scheduleAnnouncement,
   cancelScheduledAnnouncement,
   archiveAnnouncement,
@@ -100,8 +116,10 @@ export const announcementsService = {
   suggestAnnouncements,
   previewAnnouncementRecipients,
   getClubMembers,
-  getAnnouncementDeliveryStats,
-  getAnnouncementActivity,
+  getProviderHealthStatus,
+  sendControlledTest,
+  registerDeviceToken,
+  updateNotificationPreferences
 };
 
 export default announcementsService;

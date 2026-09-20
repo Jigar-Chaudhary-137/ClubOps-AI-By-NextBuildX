@@ -27,6 +27,18 @@ const config = {
   maxDocumentSizeMb: parseInt(process.env.MAX_DOCUMENT_SIZE_MB, 10) || 10,
   maxExtractedTextLength: parseInt(process.env.MAX_EXTRACTED_TEXT_LENGTH, 10) || 100000,
   maxChunksPerDocument: parseInt(process.env.MAX_CHUNKS_PER_DOCUMENT, 10) || 200,
+  // Multi-Channel Announcement Providers
+  announcementDeliveryMode: process.env.ANNOUNCEMENT_DELIVERY_MODE || 'dry_run',
+  sendgridApiKey: process.env.SENDGRID_API_KEY || null,
+  sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || null,
+  sendgridFromName: process.env.SENDGRID_FROM_NAME || 'ClubOps AI',
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || null,
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || null,
+  twilioWhatsappFrom: process.env.TWILIO_WHATSAPP_FROM || null,
+  twilioSmsFrom: process.env.TWILIO_SMS_FROM || null,
+  firebaseProjectId: process.env.FIREBASE_PROJECT_ID || null,
+  firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || null,
+  firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : null,
   isProduction,
   isDevelopment
 };

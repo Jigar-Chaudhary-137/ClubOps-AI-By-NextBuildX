@@ -3,6 +3,7 @@ const { addConnection } = require('../utils/realtime');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/errors');
 const Event = require('../models/Event');
+const User = require('../models/User');
 const { validateObjectId } = require('../utils/pagination');
 
 /**
@@ -103,6 +104,121 @@ const markAllAsRead = async (req, res, next) => {
 };
 
 /**
+ * Registers an FCM push device token for the authenticated user.
+ */
+const registerDevice = async (req, res, next) => {
+  try {
+    const { token, platform = 'web' } = req.body;
+    if (!token || typeof token !== 'string' || token.trim().length < 10) {
+      throw new AppError('Valid device token is required', 400);
+    }
+
+    const cleanToken = token.trim();
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (!Array.isArray(user.deviceTokens)) {
+      user.deviceTokens = [];
+    }
+
+    const existingIndex = user.deviceTokens.findIndex(dt => dt.token === cleanToken);
+    if (existingIndex >= 0) {
+      user.deviceTokens[existingIndex].updatedAt = new Date();
+      user.deviceTokens[existingIndex].platform = platform;
+    } else {
+      user.deviceTokens.push({
+        token: cleanToken,
+        platform,
+        updatedAt: new Date()
+      });
+    }
+
+    await user.save();
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Device token registered successfully',
+      data: {
+        registered: true,
+        platform,
+        deviceCount: user.deviceTokens.length
+      }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * Unregisters an FCM push device token for the authenticated user.
+ */
+const unregisterDevice = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token || typeof token !== 'string') {
+      throw new AppError('Device token is required', 400);
+    }
+
+    const cleanToken = token.trim();
+    await User.updateOne(
+      { _id: req.user._id },
+      { $pull: { deviceTokens: { token: cleanToken } } }
+    );
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Device token unregistered successfully',
+      data: { unregistered: true }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * Updates announcement and notification preferences for the authenticated user.
+ */
+const updatePreferences = async (req, res, next) => {
+  try {
+    const { emailAnnouncements, smsAnnouncements, whatsappAnnouncements, pushAnnouncements, inAppAnnouncements } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    user.notificationPreferences = {
+      emailAnnouncements: typeof emailAnnouncements === 'boolean' ? emailAnnouncements : (user.notificationPreferences?.emailAnnouncements ?? true),
+      smsAnnouncements: typeof smsAnnouncements === 'boolean' ? smsAnnouncements : (user.notificationPreferences?.smsAnnouncements ?? true),
+      whatsappAnnouncements: typeof whatsappAnnouncements === 'boolean' ? whatsappAnnouncements : (user.notificationPreferences?.whatsappAnnouncements ?? true),
+      pushAnnouncements: typeof pushAnnouncements === 'boolean' ? pushAnnouncements : (user.notificationPreferences?.pushAnnouncements ?? true),
+      inAppAnnouncements: typeof inAppAnnouncements === 'boolean' ? inAppAnnouncements : (user.notificationPreferences?.inAppAnnouncements ?? true)
+    };
+
+    await user.save();
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Notification preferences updated successfully',
+      data: { notificationPreferences: user.notificationPreferences }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
  * Opens a real-time SSE stream for the authenticated user.
  */
 const streamNotifications = async (req, res, next) => {
@@ -142,5 +258,8 @@ module.exports = {
   getUnreadCount,
   markAsRead,
   markAllAsRead,
+  registerDevice,
+  unregisterDevice,
+  updatePreferences,
   streamNotifications
 };

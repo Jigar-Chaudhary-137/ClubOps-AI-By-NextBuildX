@@ -313,6 +313,27 @@ export default function AnnouncementDetailsPage() {
                         </span>
                       </td>
                     </tr>
+
+                    {/* Push */}
+                    <tr>
+                      <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-400" /> Push
+                      </td>
+                      <td className="px-3 py-2 font-mono text-white">
+                        {stats.push?.sent ?? stats.push?.accepted ?? 0}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-amber-400">
+                        {stats.push?.skipped ?? 0}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-rose-400">
+                        {stats.push?.failed ?? 0}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-gray-400 font-medium capitalize">
+                          {stats.push?.simulated ? 'Simulated' : (stats.push?.status === 'not_configured' ? 'Not Configured' : (stats.push?.status || '—'))}
+                        </span>
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>

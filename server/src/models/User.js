@@ -45,6 +45,20 @@ const userSchema = new mongoose.Schema(
       default: '',
       trim: true
     },
+    deviceTokens: [
+      {
+        token: { type: String, required: true, trim: true },
+        platform: { type: String, default: 'web' },
+        updatedAt: { type: Date, default: Date.now }
+      }
+    ],
+    notificationPreferences: {
+      emailAnnouncements: { type: Boolean, default: true },
+      smsAnnouncements: { type: Boolean, default: true },
+      whatsappAnnouncements: { type: Boolean, default: true },
+      pushAnnouncements: { type: Boolean, default: true },
+      inAppAnnouncements: { type: Boolean, default: true }
+    },
     isActive: {
       type: Boolean,
       default: true

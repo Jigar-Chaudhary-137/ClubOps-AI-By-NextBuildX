@@ -8,6 +8,12 @@ const router = express.Router();
 // Apply authentication to all announcement routes
 router.use(authenticate);
 
+// Provider Health & Status (Safe, credentials redacted)
+router.get('/providers/status', announcementController.getProviderStatus);
+
+// Controlled Test Dispatch (Admin/Organizer only)
+router.post('/providers/test', authorize('admin', 'organizer'), announcementController.sendControlledTest);
+
 // Preview Recipients & Live Channel Availability
 router.post('/preview-recipients', announcementController.previewRecipients);
 

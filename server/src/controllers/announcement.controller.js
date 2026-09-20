@@ -1,6 +1,8 @@
 const announcementService = require('../services/announcement.service');
+const announcementDeliveryService = require('../services/announcements/announcementDeliveryService');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/errors');
+const User = require('../models/User');
 
 const createAnnouncement = async (req, res, next) => {
   try {
@@ -103,9 +105,6 @@ const deleteAnnouncement = async (req, res, next) => {
   }
 };
 
-const broadcastService = require('../services/broadcast.service');
-const User = require('../models/User');
-
 const previewRecipients = async (req, res, next) => {
   try {
     if (!req.user.club) {
@@ -114,7 +113,7 @@ const previewRecipients = async (req, res, next) => {
     const clubId = req.user.club._id || req.user.club;
     const { targetAudiences, audiences, targetAudience, eventId, event, customUserIds, customRecipients, channels } = req.body;
 
-    const preview = await broadcastService.getAudiencePreview(clubId, {
+    const preview = await announcementDeliveryService.getAudiencePreview(clubId, {
       audiences: targetAudiences || audiences || (targetAudience ? [targetAudience] : ['Entire Club']),
       eventId: eventId || event || null,
       customUserIds: customUserIds || customRecipients || [],
@@ -141,7 +140,7 @@ const getClubMembers = async (req, res, next) => {
     }
     const clubId = req.user.club._id || req.user.club;
     const members = await User.find({ club: clubId, isActive: true })
-      .select('_id name email role avatarUrl phone')
+      .select('_id name email role avatarUrl phone deviceTokens')
       .sort({ name: 1 })
       .lean();
 
@@ -151,7 +150,8 @@ const getClubMembers = async (req, res, next) => {
       email: m.email,
       role: m.role,
       avatarUrl: m.avatarUrl || '',
-      hasPhone: Boolean(m.phone && m.phone.trim().length >= 7)
+      hasPhone: Boolean(m.phone && m.phone.trim().length >= 7),
+      hasPush: Boolean(Array.isArray(m.deviceTokens) && m.deviceTokens.length > 0)
     }));
 
     return successResponse(res, {
@@ -173,18 +173,68 @@ const broadcastAnnouncement = async (req, res, next) => {
       throw new AppError('User is not associated with any club', 400);
     }
     const clubId = req.user.club._id || req.user.club;
-    const { channels } = req.body;
+    const { channels, deliveryMode } = req.body;
 
-    const result = await broadcastService.broadcastAnnouncement(
+    const result = await announcementDeliveryService.broadcastAnnouncement(
       clubId,
       req.user._id,
       req.params.id,
-      channels
+      channels,
+      { deliveryMode }
     );
 
     return successResponse(res, {
       status: 200,
-      message: 'Announcement broadcast processed successfully',
+      message: `Announcement broadcast processed in ${result.summary.deliveryMode.toUpperCase()} mode`,
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * Returns safe provider health status and active delivery mode.
+ */
+const getProviderStatus = async (req, res, next) => {
+  try {
+    const status = await announcementDeliveryService.getProviderStatus();
+    return successResponse(res, {
+      status: 200,
+      message: 'Provider health status retrieved successfully',
+      data: status
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * Executes a controlled test delivery to a single isolated recipient.
+ */
+const sendControlledTest = async (req, res, next) => {
+  try {
+    const { channel, testTarget, customContent, isDryRun } = req.body;
+    if (!channel || !testTarget) {
+      throw new AppError('Channel and test target destination are required', 400);
+    }
+
+    const result = await announcementDeliveryService.sendControlledTest({
+      channel,
+      testTarget,
+      customContent,
+      isDryRun: isDryRun !== undefined ? isDryRun : false
+    });
+
+    return successResponse(res, {
+      status: 200,
+      message: `Controlled test to ${channel} executed`,
       data: result
     });
   } catch (error) {
@@ -203,5 +253,7 @@ module.exports = {
   deleteAnnouncement,
   broadcastAnnouncement,
   previewRecipients,
-  getClubMembers
+  getClubMembers,
+  getProviderStatus,
+  sendControlledTest
 };

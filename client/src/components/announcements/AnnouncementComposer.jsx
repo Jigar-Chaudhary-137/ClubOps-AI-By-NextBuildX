@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Send, Clock, Sparkles, CheckCircle2, AlertCircle, FileText, Users, Radio, Calendar, RefreshCw, ShieldAlert, Check } from 'lucide-react';
+import { Send, Clock, Sparkles, CheckCircle2, AlertCircle, FileText, Users, Radio, Calendar, RefreshCw, ShieldAlert, Check, ShieldCheck, Zap } from 'lucide-react';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
@@ -155,9 +155,7 @@ export default function AnnouncementComposer({
     push: 'NOT_CONFIGURED'
   };
 
-  const hasExternalChannels = formData.channels.some((c) => c !== 'in_app');
-  const externalNotConfigured = hasExternalChannels && Object.entries(channelConfigStatus)
-    .some(([k, v]) => formData.channels.includes(k) && k !== 'in_app' && v !== 'AVAILABLE');
+  const isDryRun = (previewData?.deliveryMode || 'dry_run') === 'dry_run';
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -277,14 +275,27 @@ export default function AnnouncementComposer({
           }}
         />
 
-        {externalNotConfigured && (
-          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5 animate-fadeIn">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <span className="font-semibold text-white">Notice:</span> External delivery is not configured for one or more selected channels. The announcement will still be published and broadcasted as a real in-app announcement.
+        {/* Safe Delivery Mode Banner */}
+        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+          isDryRun 
+            ? 'bg-indigo-950/30 border-indigo-500/30 text-indigo-200' 
+            : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            {isDryRun ? <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" /> : <Zap className="w-4 h-4 text-emerald-400 shrink-0" />}
+            <div>
+              <span className="font-semibold">{isDryRun ? 'DRY RUN MODE' : 'LIVE DELIVERY MODE'}:</span>{' '}
+              {isDryRun 
+                ? 'External channels will be verified and simulated without consuming provider quotas.'
+                : 'Messages will be dispatched directly to live external services.'}
             </div>
           </div>
-        )}
+          <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-wider ${
+            isDryRun ? 'bg-indigo-500/20 text-indigo-300' : 'bg-emerald-500/20 text-emerald-300'
+          }`}>
+            {isDryRun ? 'Simulated' : 'Live'}
+          </span>
+        </div>
       </div>
 
       {/* 4. Real Recipient Summary & Channel Breakdown Matrix */}
@@ -318,7 +329,7 @@ export default function AnnouncementComposer({
         ) : (
           <div className="space-y-4">
             {/* Summary Counters */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-[#111827] border border-[#263247]">
                 <span className="text-[11px] text-gray-400">Selected Audiences</span>
                 <p className="text-lg font-bold text-white font-mono">{formData.audiences.length}</p>
@@ -333,22 +344,24 @@ export default function AnnouncementComposer({
                 <p className="text-[10px] text-gray-500">Deduplicated club members</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247] col-span-2 sm:col-span-1">
-                <span className="text-[11px] text-gray-400">Contact Coverage</span>
-                <div className="text-[11px] text-gray-300 space-y-0.5 mt-0.5">
-                  <div className="flex justify-between">
-                    <span>Email:</span>
-                    <span className="font-mono text-white">
-                      {previewData?.channelAvailability?.email?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Phone:</span>
-                    <span className="font-mono text-white">
-                      {previewData?.channelAvailability?.whatsapp?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
-                    </span>
-                  </div>
-                </div>
+              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247]">
+                <span className="text-[11px] text-gray-400">Email Reach</span>
+                <p className="text-lg font-bold text-sky-400 font-mono">
+                  {previewData?.channelAvailability?.email?.available ?? 0}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  {previewData?.missingContactSummary?.noEmailCount ?? 0} missing email
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247]">
+                <span className="text-[11px] text-gray-400">Phone / SMS Reach</span>
+                <p className="text-lg font-bold text-amber-400 font-mono">
+                  {previewData?.channelAvailability?.sms?.available ?? 0}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  {previewData?.missingContactSummary?.noPhoneCount ?? 0} missing phone
+                </p>
               </div>
             </div>
 
@@ -374,14 +387,14 @@ export default function AnnouncementComposer({
                     </td>
                     <td className="px-3 py-2 text-gray-400 font-mono">0 missing</td>
                     <td className="px-3 py-2">
-                      <span className="text-emerald-400 font-medium">✓ Available</span>
+                      <span className="text-emerald-400 font-medium">✓ Connected</span>
                     </td>
                   </tr>
 
                   {/* Email */}
                   <tr>
                     <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-sky-400" /> Email
+                      <span className="w-2 h-2 rounded-full bg-sky-400" /> Email Broadcast
                     </td>
                     <td className="px-3 py-2 font-mono text-white">
                       {previewData?.channelAvailability?.email?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
@@ -390,10 +403,10 @@ export default function AnnouncementComposer({
                       {previewData?.missingContactSummary?.noEmailCount ?? 0} no email
                     </td>
                     <td className="px-3 py-2">
-                      {channelConfigStatus.email === 'AVAILABLE' ? (
-                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      {previewData?.channelAvailability?.email?.status === 'CONNECTED' || channelConfigStatus.email === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Connected</span>
                       ) : (
-                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                        <span className="text-amber-400 font-medium">⚠ Not Configured</span>
                       )}
                     </td>
                   </tr>
@@ -410,10 +423,10 @@ export default function AnnouncementComposer({
                       {previewData?.missingContactSummary?.noPhoneCount ?? 0} no phone
                     </td>
                     <td className="px-3 py-2">
-                      {channelConfigStatus.whatsapp === 'AVAILABLE' ? (
-                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      {previewData?.channelAvailability?.whatsapp?.status === 'CONNECTED' || channelConfigStatus.whatsapp === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Connected</span>
                       ) : (
-                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                        <span className="text-amber-400 font-medium">⚠ Not Configured</span>
                       )}
                     </td>
                   </tr>
@@ -421,7 +434,7 @@ export default function AnnouncementComposer({
                   {/* SMS */}
                   <tr>
                     <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" /> SMS
+                      <span className="w-2 h-2 rounded-full bg-amber-400" /> SMS Alert
                     </td>
                     <td className="px-3 py-2 font-mono text-white">
                       {previewData?.channelAvailability?.sms?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
@@ -430,10 +443,30 @@ export default function AnnouncementComposer({
                       {previewData?.missingContactSummary?.noPhoneCount ?? 0} no phone
                     </td>
                     <td className="px-3 py-2">
-                      {channelConfigStatus.sms === 'AVAILABLE' ? (
-                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      {previewData?.channelAvailability?.sms?.status === 'CONNECTED' || channelConfigStatus.sms === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Connected</span>
                       ) : (
-                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                        <span className="text-amber-400 font-medium">⚠ Not Configured</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Push */}
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-400" /> Push Notification
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">
+                      {previewData?.channelAvailability?.push?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </td>
+                    <td className="px-3 py-2 text-gray-400 font-mono">
+                      {previewData?.missingContactSummary?.noPushCount ?? 0} no device token
+                    </td>
+                    <td className="px-3 py-2">
+                      {previewData?.channelAvailability?.push?.status === 'CONNECTED' || channelConfigStatus.push === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Connected</span>
+                      ) : (
+                        <span className="text-amber-400 font-medium">⚠ Not Configured</span>
                       )}
                     </td>
                   </tr>
@@ -500,11 +533,10 @@ export default function AnnouncementComposer({
             isLoading={isSubmitting}
             leftIcon={<Send className="w-4 h-4" />}
           >
-            {formData.scheduleType === 'later' ? 'Schedule Announcement' : 'Publish Announcement'}
+            {formData.scheduleType === 'later' ? 'Schedule Announcement' : (isDryRun ? 'Publish Announcement (Dry Run)' : 'Publish & Broadcast Live')}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Mail, MessageSquare, Smartphone, Send, Check, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Smartphone, Send, Check, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const channels = [
   {
@@ -13,28 +13,28 @@ const channels = [
     id: 'email',
     name: 'Email Broadcast',
     key: 'email',
-    description: 'Dispatch to verified recipient email addresses',
+    description: 'SendGrid transactional email delivery',
     icon: <Mail className="w-4 h-4 text-[#38BDF8]" />
   },
   {
     id: 'whatsapp',
     name: 'WhatsApp',
     key: 'whatsapp',
-    description: 'Direct messaging via WhatsApp API service',
+    description: 'Twilio WhatsApp messaging & sandbox',
     icon: <MessageSquare className="w-4 h-4 text-[#4ADE80]" />
   },
   {
     id: 'sms',
     name: 'SMS Alert',
     key: 'sms',
-    description: 'Carrier SMS dispatch via SMS gateway',
+    description: 'Twilio carrier SMS dispatch',
     icon: <Smartphone className="w-4 h-4 text-[#FBBF24]" />
   },
   {
     id: 'push',
     name: 'Push Notification',
     key: 'push',
-    description: 'Instant web & mobile push notifications',
+    description: 'Firebase Cloud Messaging (FCM)',
     icon: <Send className="w-4 h-4 text-[#A78BFA]" />
   }
 ];
@@ -45,7 +45,7 @@ export default function AnnouncementChannelSelector({
   onChange,
   className = ''
 }) {
-  // Normalize selected channels array (handle both string IDs like 'In-App' and 'in_app')
+  // Normalize selected channels array
   const normalizeKey = (c) => (c || '').toLowerCase().replace(/[-\s]+/g, '_').replace('broadcast', '').replace('alert', '').replace('notification', '').trim();
 
   const currentSelected = Array.isArray(selectedChannels)
@@ -65,12 +65,35 @@ export default function AnnouncementChannelSelector({
     onChange?.(next);
   };
 
+  const renderStatusBadge = (chanKey) => {
+    const rawStatus = channelConfigStatus[chanKey];
+    const status = typeof rawStatus === 'string' ? rawStatus.toUpperCase() : (rawStatus?.status || (chanKey === 'in_app' ? 'CONNECTED' : 'NOT_CONFIGURED'));
+
+    if (status === 'CONNECTED' || status === 'AVAILABLE') {
+      return (
+        <span className="inline-flex items-center gap-1 text-emerald-400 font-medium text-[10px]">
+          <CheckCircle2 className="w-3 h-3" /> ✓ Connected
+        </span>
+      );
+    }
+    if (status === 'CONFIGURATION_ERROR' || status === 'ERROR') {
+      return (
+        <span className="inline-flex items-center gap-1 text-rose-400 font-medium text-[10px]">
+          <AlertTriangle className="w-3 h-3" /> ⚠ Configuration Error
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-amber-400 font-medium text-[10px]">
+        <AlertCircle className="w-3 h-3" /> ⚠ Not Configured
+      </span>
+    );
+  };
+
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 ${className}`}>
       {channels.map((chan) => {
         const isSelected = currentSelected.includes(chan.key);
-        const status = channelConfigStatus[chan.key] || (chan.key === 'in_app' ? 'AVAILABLE' : 'NOT_CONFIGURED');
-        const isConfigured = status === 'AVAILABLE';
 
         return (
           <button
@@ -114,16 +137,8 @@ export default function AnnouncementChannelSelector({
 
             {/* Provider Configuration Status Pill */}
             <div className="flex items-center justify-between w-full pt-1 border-t border-[#263247]/50 text-[10px]">
-              <span className="text-[#64748B]">Channel Provider:</span>
-              {isConfigured ? (
-                <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3 h-3" /> Configured
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-amber-400 font-medium">
-                  <AlertCircle className="w-3 h-3" /> Not Configured
-                </span>
-              )}
+              <span className="text-[#64748B]">Provider Health:</span>
+              {renderStatusBadge(chan.key)}
             </div>
           </button>
         );
@@ -131,4 +146,3 @@ export default function AnnouncementChannelSelector({
     </div>
   );
 }
-

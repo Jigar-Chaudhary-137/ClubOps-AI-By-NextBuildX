@@ -16,6 +16,13 @@ router.get('/unread-count', notificationController.getUnreadCount);
 // Mark All Read
 router.patch('/read-all', notificationController.markAllAsRead);
 
+// Device Token Registration (FCM Push)
+router.post('/register-device', notificationController.registerDevice);
+router.delete('/unregister-device', notificationController.unregisterDevice);
+
+// Notification Preferences
+router.patch('/preferences', notificationController.updatePreferences);
+
 // List Notifications
 router.get('/', notificationController.listNotifications);
 
