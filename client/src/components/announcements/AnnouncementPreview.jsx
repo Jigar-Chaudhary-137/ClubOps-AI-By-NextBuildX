@@ -7,12 +7,14 @@ import AnnouncementAudienceBadge from './AnnouncementAudienceBadge';
 export default function AnnouncementPreview({
   title = '',
   message = '',
-  audience = '—',
-  channel = '—',
+  audience = 'Entire Club',
+  channel = 'in_app',
   scheduled = '—',
   className = ''
 }) {
   const hasContent = Boolean(title.trim() || message.trim());
+  const audienceLabel = Array.isArray(audience) ? audience.join(', ') : (audience || 'Entire Club');
+  const channelLabel = Array.isArray(channel) ? channel.join(', ') : (channel || 'In-App');
 
   return (
     <Card className={`border-[#263247] bg-[#151D2E] ${className}`}>
@@ -41,9 +43,9 @@ export default function AnnouncementPreview({
           <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] space-y-3 shadow-md">
             {/* Header info */}
             <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-[#263247]/60">
-              <div className="flex items-center gap-2">
-                {channel !== '—' && <AnnouncementChannelBadge channel={channel} size="sm" />}
-                {audience !== '—' && <AnnouncementAudienceBadge audience={audience} size="sm" />}
+              <div className="flex items-center gap-2 flex-wrap">
+                <AnnouncementChannelBadge channel={channel} size="sm" />
+                <AnnouncementAudienceBadge audience={audience} size="sm" />
               </div>
               <span className="text-[11px] font-mono text-[#64748B]">
                 {scheduled !== '—' ? `Scheduled: ${scheduled}` : 'Draft'}
@@ -61,12 +63,12 @@ export default function AnnouncementPreview({
             </div>
 
             {/* Metadata Footer */}
-            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-[#94A3B8]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] text-[#94A3B8]">
               <div>
-                <span className="text-[#64748B]">Audience:</span> <strong className="text-white">{audience}</strong>
+                <span className="text-[#64748B]">Target Audiences:</span> <strong className="text-white ml-1">{audienceLabel}</strong>
               </div>
               <div>
-                <span className="text-[#64748B]">Channel:</span> <strong className="text-white">{channel}</strong>
+                <span className="text-[#64748B]">Channels:</span> <strong className="text-white ml-1">{channelLabel}</strong>
               </div>
             </div>
           </div>
@@ -75,3 +77,4 @@ export default function AnnouncementPreview({
     </Card>
   );
 }
+

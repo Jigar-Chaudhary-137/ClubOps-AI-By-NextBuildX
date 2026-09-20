@@ -104,6 +104,68 @@ const deleteAnnouncement = async (req, res, next) => {
 };
 
 const broadcastService = require('../services/broadcast.service');
+const User = require('../models/User');
+
+const previewRecipients = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const { targetAudiences, audiences, targetAudience, eventId, event, customUserIds, customRecipients, channels } = req.body;
+
+    const preview = await broadcastService.getAudiencePreview(clubId, {
+      audiences: targetAudiences || audiences || (targetAudience ? [targetAudience] : ['Entire Club']),
+      eventId: eventId || event || null,
+      customUserIds: customUserIds || customRecipients || [],
+      channels: channels || ['in_app']
+    });
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Recipient preview resolved successfully',
+      data: preview
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
+
+const getClubMembers = async (req, res, next) => {
+  try {
+    if (!req.user.club) {
+      throw new AppError('User is not associated with any club', 400);
+    }
+    const clubId = req.user.club._id || req.user.club;
+    const members = await User.find({ club: clubId, isActive: true })
+      .select('_id name email role avatarUrl phone')
+      .sort({ name: 1 })
+      .lean();
+
+    const safeMembers = members.map(m => ({
+      _id: m._id,
+      name: m.name,
+      email: m.email,
+      role: m.role,
+      avatarUrl: m.avatarUrl || '',
+      hasPhone: Boolean(m.phone && m.phone.trim().length >= 7)
+    }));
+
+    return successResponse(res, {
+      status: 200,
+      message: 'Club members retrieved successfully',
+      data: safeMembers
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(res, { status: error.statusCode, message: error.message });
+    }
+    next(error);
+  }
+};
 
 const broadcastAnnouncement = async (req, res, next) => {
   try {
@@ -139,5 +201,7 @@ module.exports = {
   getAnnouncementById,
   updateAnnouncement,
   deleteAnnouncement,
-  broadcastAnnouncement
+  broadcastAnnouncement,
+  previewRecipients,
+  getClubMembers
 };

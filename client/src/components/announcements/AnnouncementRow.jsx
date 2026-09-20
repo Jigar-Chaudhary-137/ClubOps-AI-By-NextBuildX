@@ -8,20 +8,22 @@ import AnnouncementAudienceBadge from './AnnouncementAudienceBadge';
 const AnnouncementRow = ({ announcement }) => {
   if (!announcement) return null;
 
-  const {
-    id,
-    title,
-    message,
-    status = 'draft',
-    channels = ['in_app'],
-    audience = 'entire_club',
-    eventName,
-    scheduledFor,
-    publishedAt,
-    authorName = 'Organizer',
-    updatedAt,
-    createdAt,
-  } = announcement;
+  const id = announcement._id || announcement.id;
+  const title = announcement.title;
+  const message = announcement.content || announcement.message;
+  const status = announcement.status || 'draft';
+  const channels = Array.isArray(announcement.channels) && announcement.channels.length > 0
+    ? announcement.channels
+    : [announcement.channel || 'in_app'];
+  const audience = announcement.targetAudiences && announcement.targetAudiences.length > 0
+    ? announcement.targetAudiences
+    : (announcement.targetAudience || announcement.audience || 'Entire Club');
+  const eventName = announcement.eventName || announcement.event?.title;
+  const scheduledFor = announcement.scheduledFor;
+  const publishedAt = announcement.publishedAt;
+  const authorName = announcement.createdBy?.name || announcement.authorName || 'Organizer';
+  const updatedAt = announcement.updatedAt;
+  const createdAt = announcement.createdAt;
 
   const dateDisplay = scheduledFor 
     ? { label: 'Scheduled', val: new Date(scheduledFor).toLocaleDateString(), isSched: true }

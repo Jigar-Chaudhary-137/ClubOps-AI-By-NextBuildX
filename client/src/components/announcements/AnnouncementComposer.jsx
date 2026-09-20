@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Send, Clock, Sparkles, CheckCircle2, AlertCircle, FileText, Users, Radio, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Send, Clock, Sparkles, CheckCircle2, AlertCircle, FileText, Users, Radio, Calendar, RefreshCw, ShieldAlert, Check } from 'lucide-react';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
@@ -8,6 +8,7 @@ import AnnouncementAudienceSelector from './AnnouncementAudienceSelector';
 import AnnouncementChannelSelector from './AnnouncementChannelSelector';
 import AnnouncementSchedule from './AnnouncementSchedule';
 import AnnouncementPreview from './AnnouncementPreview';
+import { previewAnnouncementRecipients } from '../../services/api/announcements';
 
 export default function AnnouncementComposer({
   initialData = {},
@@ -20,13 +21,27 @@ export default function AnnouncementComposer({
   const [formData, setFormData] = useState({
     title: initialData.title || (initialPrompt ? 'AI Generated Announcement' : ''),
     message: initialData.message || initialData.content || initialPrompt || '',
-    audience: initialData.audience || 'Entire Club',
-    channel: initialData.channel || 'In-App',
+    audiences: Array.isArray(initialData.targetAudiences) && initialData.targetAudiences.length > 0
+      ? initialData.targetAudiences
+      : (initialData.audience ? [initialData.audience] : ['Entire Club']),
+    channels: Array.isArray(initialData.channels) && initialData.channels.length > 0
+      ? initialData.channels
+      : ['in_app'],
     event: initialData.event || '',
+    customUserIds: Array.isArray(initialData.customRecipients)
+      ? initialData.customRecipients.map(r => typeof r === 'object' ? r._id : r)
+      : [],
     scheduleType: initialData.scheduleType || 'now',
     scheduledDate: initialData.scheduledDate || '',
     scheduledTime: initialData.scheduledTime || ''
   });
+
+  const [previewData, setPreviewData] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
+
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialPrompt && !formData.message) {
@@ -38,8 +53,32 @@ export default function AnnouncementComposer({
     }
   }, [initialPrompt]);
 
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Fetch live recipient preview from backend
+  const fetchRecipientPreview = useCallback(async () => {
+    setLoadingPreview(true);
+    setPreviewError(null);
+    try {
+      const res = await previewAnnouncementRecipients({
+        targetAudiences: formData.audiences,
+        eventId: formData.event || null,
+        customUserIds: formData.customUserIds,
+        channels: formData.channels
+      });
+      if (res?.data) {
+        setPreviewData(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to preview recipients:', err);
+      setPreviewError(err.response?.data?.message || err.message || 'Failed to calculate recipients');
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [formData.audiences, formData.event, formData.customUserIds, formData.channels]);
+
+  // Auto-fetch preview whenever audience, event, or custom members change
+  useEffect(() => {
+    fetchRecipientPreview();
+  }, [fetchRecipientPreview]);
 
   const eventOptions = [
     { value: '', label: 'Select event (optional)' },
@@ -54,6 +93,25 @@ export default function AnnouncementComposer({
     if (!formData.message.trim()) {
       newErrors.message = 'Message content is required.';
     }
+    if (!formData.audiences || formData.audiences.length === 0) {
+      newErrors.audiences = 'Please select at least one target audience.';
+    }
+    if (
+      (formData.audiences.includes('Event Participants') || formData.audiences.includes('Volunteers')) &&
+      !formData.event
+    ) {
+      newErrors.event = 'Please select a linked event for Event Participants / Volunteers audience.';
+    }
+    if (
+      formData.audiences.includes('Custom Audience') &&
+      (!formData.customUserIds || formData.customUserIds.length === 0)
+    ) {
+      newErrors.custom = 'Please select at least one club member for Custom Audience.';
+    }
+    if (!formData.channels || formData.channels.length === 0) {
+      newErrors.channels = 'Please select at least one delivery channel.';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -62,17 +120,13 @@ export default function AnnouncementComposer({
     if (!validate()) return;
     setIsSubmitting(true);
 
-    let audienceKey = 'all';
-    const audLower = (formData.audience || '').toLowerCase();
-    if (audLower.includes('volunteer')) audienceKey = 'volunteers';
-    else if (audLower.includes('organizer')) audienceKey = 'organizers';
-    else if (audLower.includes('member')) audienceKey = 'members';
-
     const payload = {
       title: formData.title.trim(),
       content: formData.message.trim(),
-      targetAudience: audienceKey,
-      channels: [formData.channel ? formData.channel.toLowerCase().replace('-', '_') : 'in_app'],
+      targetAudiences: formData.audiences,
+      targetAudience: formData.audiences[0] || 'all',
+      customRecipients: formData.customUserIds,
+      channels: formData.channels,
       event: formData.event || null,
       status: actionType === 'draft' ? 'draft' : formData.scheduleType === 'later' ? 'scheduled' : 'published',
       scheduledFor: formData.scheduleType === 'later' && formData.scheduledDate
@@ -92,6 +146,18 @@ export default function AnnouncementComposer({
   const scheduleDisplay = formData.scheduleType === 'later' && formData.scheduledDate
     ? `${formData.scheduledDate} ${formData.scheduledTime}`.trim()
     : 'Immediate';
+
+  const channelConfigStatus = previewData?.channelConfigStatus || {
+    in_app: 'AVAILABLE',
+    email: 'NOT_CONFIGURED',
+    whatsapp: 'NOT_CONFIGURED',
+    sms: 'NOT_CONFIGURED',
+    push: 'NOT_CONFIGURED'
+  };
+
+  const hasExternalChannels = formData.channels.some((c) => c !== 'in_app');
+  const externalNotConfigured = hasExternalChannels && Object.entries(channelConfigStatus)
+    .some(([k, v]) => formData.channels.includes(k) && k !== 'in_app' && v !== 'AVAILABLE');
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -128,45 +194,261 @@ export default function AnnouncementComposer({
         />
 
         <Select
-          label="Linked Event (Optional)"
+          label="Linked Event (Optional / Required for Event/Volunteer audiences)"
           options={eventOptions}
           value={formData.event}
-          onChange={(e) => setFormData((p) => ({ ...p, event: e.target.value }))}
+          onChange={(e) => {
+            setFormData((p) => ({ ...p, event: e.target.value }));
+            if (errors.event) setErrors((p) => ({ ...p, event: null }));
+          }}
+          error={errors.event}
           disabled={isSubmitting}
         />
       </div>
 
-      {/* 2. Target Audience Section */}
+      {/* 2. Target Audience Section (Multi-Select) */}
       <div className="p-5 rounded-xl bg-[#151D2E] border border-[#263247] space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-[#263247]/60">
-          <Users className="w-4 h-4 text-[#818CF8]" />
-          <h3 className="text-sm font-semibold text-white">2. Target Audience</h3>
+        <div className="flex items-center justify-between pb-2 border-b border-[#263247]/60">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-[#818CF8]" />
+            <h3 className="text-sm font-semibold text-white">2. Target Audience (Multi-Select)</h3>
+          </div>
+          <span className="text-xs font-mono text-indigo-400">
+            {formData.audiences.length} Selected
+          </span>
         </div>
+
+        {errors.audiences && (
+          <div className="text-xs text-rose-400 flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" /> {errors.audiences}
+          </div>
+        )}
 
         <AnnouncementAudienceSelector
-          selectedAudience={formData.audience}
-          onChange={(aud) => setFormData((p) => ({ ...p, audience: aud }))}
+          selectedAudiences={formData.audiences}
+          onChange={(auds) => {
+            setFormData((p) => ({ ...p, audiences: auds }));
+            if (errors.audiences) setErrors((p) => ({ ...p, audiences: null }));
+          }}
+          events={events}
+          selectedEvent={formData.event}
+          onEventChange={(evtId) => {
+            setFormData((p) => ({ ...p, event: evtId }));
+            if (errors.event) setErrors((p) => ({ ...p, event: null }));
+          }}
+          customUserIds={formData.customUserIds}
+          onCustomUsersChange={(users) => {
+            setFormData((p) => ({ ...p, customUserIds: users }));
+            if (errors.custom) setErrors((p) => ({ ...p, custom: null }));
+          }}
         />
+
+        {errors.custom && (
+          <div className="text-xs text-rose-400 flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" /> {errors.custom}
+          </div>
+        )}
       </div>
 
-      {/* 3. Delivery Channel Section */}
+      {/* 3. Delivery Channels Section (Multi-Select with Honest Provider Status) */}
       <div className="p-5 rounded-xl bg-[#151D2E] border border-[#263247] space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-[#263247]/60">
-          <Radio className="w-4 h-4 text-[#818CF8]" />
-          <h3 className="text-sm font-semibold text-white">3. Delivery Channel</h3>
+        <div className="flex items-center justify-between pb-2 border-b border-[#263247]/60">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[#818CF8]" />
+            <h3 className="text-sm font-semibold text-white">3. Delivery Channels</h3>
+          </div>
+          <span className="text-xs font-mono text-indigo-400">
+            {formData.channels.length} Selected
+          </span>
         </div>
 
+        {errors.channels && (
+          <div className="text-xs text-rose-400 flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" /> {errors.channels}
+          </div>
+        )}
+
         <AnnouncementChannelSelector
-          selectedChannel={formData.channel}
-          onChange={(chan) => setFormData((p) => ({ ...p, channel: chan }))}
+          selectedChannels={formData.channels}
+          channelConfigStatus={channelConfigStatus}
+          onChange={(chans) => {
+            setFormData((p) => ({ ...p, channels: chans }));
+            if (errors.channels) setErrors((p) => ({ ...p, channels: null }));
+          }}
         />
+
+        {externalNotConfigured && (
+          <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-semibold text-white">Notice:</span> External delivery is not configured for one or more selected channels. The announcement will still be published and broadcasted as a real in-app announcement.
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 4. Scheduling Section */}
+      {/* 4. Real Recipient Summary & Channel Breakdown Matrix */}
+      <div className="p-5 rounded-xl bg-[#151D2E] border border-[#263247] space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-[#263247]/60">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-white">4. Recipient Breakdown & Channel Availability</h3>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={fetchRecipientPreview}
+            disabled={loadingPreview}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${loadingPreview ? 'animate-spin' : ''}`} />}
+          >
+            Preview Recipients
+          </Button>
+        </div>
+
+        {loadingPreview ? (
+          <div className="py-6 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+            <span>Resolving target audience and deduplicating unique recipients...</span>
+          </div>
+        ) : previewError ? (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
+            {previewError}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Summary Counters */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247]">
+                <span className="text-[11px] text-gray-400">Selected Audiences</span>
+                <p className="text-lg font-bold text-white font-mono">{formData.audiences.length}</p>
+                <p className="text-[10px] text-gray-500 truncate">{formData.audiences.join(', ')}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247]">
+                <span className="text-[11px] text-gray-400">Unique Recipients</span>
+                <p className="text-lg font-bold text-emerald-400 font-mono">
+                  {previewData?.uniqueRecipients ?? 0}
+                </p>
+                <p className="text-[10px] text-gray-500">Deduplicated club members</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#111827] border border-[#263247] col-span-2 sm:col-span-1">
+                <span className="text-[11px] text-gray-400">Contact Coverage</span>
+                <div className="text-[11px] text-gray-300 space-y-0.5 mt-0.5">
+                  <div className="flex justify-between">
+                    <span>Email:</span>
+                    <span className="font-mono text-white">
+                      {previewData?.channelAvailability?.email?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Phone:</span>
+                    <span className="font-mono text-white">
+                      {previewData?.channelAvailability?.whatsapp?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Channel Availability Table */}
+            <div className="overflow-x-auto rounded-xl border border-[#263247]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111827] text-gray-400 border-b border-[#263247]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Channel</th>
+                    <th className="px-3 py-2 font-medium">Recipients Reachable</th>
+                    <th className="px-3 py-2 font-medium">Missing Info</th>
+                    <th className="px-3 py-2 font-medium">Provider Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#263247]/50 bg-[#151D2E]/60">
+                  {/* In-App */}
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-indigo-400" /> In-App
+                    </td>
+                    <td className="px-3 py-2 font-mono text-emerald-300">
+                      {previewData?.channelAvailability?.in_app?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </td>
+                    <td className="px-3 py-2 text-gray-400 font-mono">0 missing</td>
+                    <td className="px-3 py-2">
+                      <span className="text-emerald-400 font-medium">✓ Available</span>
+                    </td>
+                  </tr>
+
+                  {/* Email */}
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-sky-400" /> Email
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">
+                      {previewData?.channelAvailability?.email?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </td>
+                    <td className="px-3 py-2 text-amber-400 font-mono">
+                      {previewData?.missingContactSummary?.noEmailCount ?? 0} no email
+                    </td>
+                    <td className="px-3 py-2">
+                      {channelConfigStatus.email === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      ) : (
+                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* WhatsApp */}
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" /> WhatsApp
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">
+                      {previewData?.channelAvailability?.whatsapp?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </td>
+                    <td className="px-3 py-2 text-amber-400 font-mono">
+                      {previewData?.missingContactSummary?.noPhoneCount ?? 0} no phone
+                    </td>
+                    <td className="px-3 py-2">
+                      {channelConfigStatus.whatsapp === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      ) : (
+                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* SMS */}
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" /> SMS
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">
+                      {previewData?.channelAvailability?.sms?.available ?? 0} / {previewData?.uniqueRecipients ?? 0}
+                    </td>
+                    <td className="px-3 py-2 text-amber-400 font-mono">
+                      {previewData?.missingContactSummary?.noPhoneCount ?? 0} no phone
+                    </td>
+                    <td className="px-3 py-2">
+                      {channelConfigStatus.sms === 'AVAILABLE' ? (
+                        <span className="text-emerald-400 font-medium">✓ Configured</span>
+                      ) : (
+                        <span className="text-amber-400 font-medium">⚠ Not configured</span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 5. Scheduling Section */}
       <div className="p-5 rounded-xl bg-[#151D2E] border border-[#263247] space-y-4">
         <div className="flex items-center gap-2 pb-2 border-b border-[#263247]/60">
           <Clock className="w-4 h-4 text-[#818CF8]" />
-          <h3 className="text-sm font-semibold text-white">4. Scheduling</h3>
+          <h3 className="text-sm font-semibold text-white">5. Scheduling</h3>
         </div>
 
         <AnnouncementSchedule
@@ -179,12 +461,12 @@ export default function AnnouncementComposer({
         />
       </div>
 
-      {/* 5. Live Preview Section */}
+      {/* 6. Live Announcement View */}
       <AnnouncementPreview
         title={formData.title}
         message={formData.message}
-        audience={formData.audience}
-        channel={formData.channel}
+        audience={formData.audiences}
+        channel={formData.channels}
         scheduled={scheduleDisplay}
       />
 
@@ -225,3 +507,4 @@ export default function AnnouncementComposer({
     </div>
   );
 }
+

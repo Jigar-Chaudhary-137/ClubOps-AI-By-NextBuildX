@@ -149,11 +149,24 @@ export default function AnnouncementsPage() {
 
         const matchesStatus = statusFilter === 'all' || (item.status || 'published') === statusFilter;
 
+        const itemChannels = Array.isArray(item.channels) && item.channels.length > 0
+          ? item.channels
+          : [item.channel || 'in_app'];
+
+        const itemAudiences = Array.isArray(item.targetAudiences) && item.targetAudiences.length > 0
+          ? item.targetAudiences.map(a => a.toLowerCase().replace(/[\s_-]+/g, ''))
+          : [(item.targetAudience || item.audience || 'all').toLowerCase().replace(/[\s_-]+/g, '')];
+
+        const normChanFilter = channelFilter.toLowerCase().replace(/[\s_-]+/g, '');
+        const normAudFilter = audienceFilter.toLowerCase().replace(/[\s_-]+/g, '');
+
         const matchesChannel =
           channelFilter === 'all' ||
-          (Array.isArray(item.channels) && item.channels.includes(channelFilter));
+          itemChannels.some(ch => ch.toLowerCase().replace(/[\s_-]+/g, '').includes(normChanFilter));
 
-        const matchesAudience = audienceFilter === 'all' || (item.targetAudience || item.audience) === audienceFilter;
+        const matchesAudience =
+          audienceFilter === 'all' ||
+          itemAudiences.some(aud => aud.includes(normAudFilter) || (normAudFilter === 'allmembers' && (aud.includes('entire') || aud.includes('all'))));
 
         return matchesSearch && matchesStatus && matchesChannel && matchesAudience;
       })

@@ -65,6 +65,16 @@ export async function suggestAnnouncements(context = {}) {
   return response.data;
 }
 
+export async function previewAnnouncementRecipients(data) {
+  const response = await apiClient.post('/announcements/preview-recipients', data);
+  return response.data;
+}
+
+export async function getClubMembers() {
+  const response = await apiClient.get('/announcements/club-members');
+  return response.data;
+}
+
 export async function getAnnouncementDeliveryStats(id) {
   const response = await apiClient.get(`/announcements/${id}`);
   return response.data;
@@ -88,6 +98,8 @@ export const announcementsService = {
   generateAnnouncementContent,
   adaptAnnouncementTone,
   suggestAnnouncements,
+  previewAnnouncementRecipients,
+  getClubMembers,
   getAnnouncementDeliveryStats,
   getAnnouncementActivity,
 };

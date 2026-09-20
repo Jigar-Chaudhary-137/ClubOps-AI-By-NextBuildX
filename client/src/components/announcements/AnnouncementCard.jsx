@@ -8,19 +8,21 @@ import AnnouncementAudienceBadge from './AnnouncementAudienceBadge';
 const AnnouncementCard = ({ announcement }) => {
   if (!announcement) return null;
 
-  const {
-    id,
-    title,
-    message,
-    status = 'draft',
-    channels = ['in_app'],
-    audience = 'entire_club',
-    eventName,
-    scheduledFor,
-    publishedAt,
-    authorName = 'Club Organizer',
-    createdAt,
-  } = announcement;
+  const id = announcement._id || announcement.id;
+  const title = announcement.title;
+  const message = announcement.content || announcement.message;
+  const status = announcement.status || 'draft';
+  const channels = Array.isArray(announcement.channels) && announcement.channels.length > 0
+    ? announcement.channels
+    : [announcement.channel || 'in_app'];
+  const audience = announcement.targetAudiences && announcement.targetAudiences.length > 0
+    ? announcement.targetAudiences
+    : (announcement.targetAudience || announcement.audience || 'Entire Club');
+  const eventName = announcement.eventName || announcement.event?.title;
+  const scheduledFor = announcement.scheduledFor;
+  const publishedAt = announcement.publishedAt;
+  const authorName = announcement.createdBy?.name || announcement.authorName || 'Club Organizer';
+  const createdAt = announcement.createdAt;
 
   return (
     <div className="bg-[#111827] border border-[#263247] rounded-xl p-5 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-200 flex flex-col justify-between group">

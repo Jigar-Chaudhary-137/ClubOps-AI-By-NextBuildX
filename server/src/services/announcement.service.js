@@ -25,6 +25,16 @@ const createAnnouncement = async (clubId, userId, data) => {
     eventId = data.event;
   }
 
+  const targetAudiences = Array.isArray(data.targetAudiences) && data.targetAudiences.length > 0
+    ? data.targetAudiences
+    : (data.targetAudience ? [data.targetAudience] : ['Entire Club']);
+
+  const channels = Array.isArray(data.channels) && data.channels.length > 0
+    ? data.channels
+    : ['in_app'];
+
+  const customRecipients = Array.isArray(data.customRecipients) ? data.customRecipients : [];
+
   const announcement = new Announcement({
     title: data.title.trim(),
     content: data.content.trim(),
@@ -32,7 +42,11 @@ const createAnnouncement = async (clubId, userId, data) => {
     event: eventId,
     priority: data.priority || 'normal',
     status: data.status || 'published',
-    targetAudience: data.targetAudience || 'all',
+    targetAudience: data.targetAudience || targetAudiences[0] || 'all',
+    targetAudiences,
+    customRecipients,
+    channels,
+    scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : null,
     publishedAt: data.publishedAt || new Date(),
     createdBy: userId
   });
@@ -40,7 +54,8 @@ const createAnnouncement = async (clubId, userId, data) => {
   await announcement.save();
   return announcement.populate([
     { path: 'createdBy', select: 'name email avatarUrl role' },
-    { path: 'event', select: 'title status' }
+    { path: 'event', select: 'title status' },
+    { path: 'customRecipients', select: 'name email role avatarUrl' }
   ]);
 };
 
@@ -98,7 +113,8 @@ const getAnnouncementById = async (clubId, announcementId) => {
 
   const announcement = await Announcement.findOne({ _id: announcementId, club: clubId })
     .populate('createdBy', 'name email avatarUrl role')
-    .populate('event', 'title status startDate endDate');
+    .populate('event', 'title status startDate endDate')
+    .populate('customRecipients', 'name email role avatarUrl');
 
   if (!announcement) {
     throw new AppError('Announcement not found', 404);
@@ -136,11 +152,24 @@ const updateAnnouncement = async (clubId, announcementId, data) => {
   if (data.priority !== undefined) announcement.priority = data.priority;
   if (data.status !== undefined) announcement.status = data.status;
   if (data.targetAudience !== undefined) announcement.targetAudience = data.targetAudience;
+  if (data.targetAudiences !== undefined && Array.isArray(data.targetAudiences)) {
+    announcement.targetAudiences = data.targetAudiences;
+  }
+  if (data.customRecipients !== undefined && Array.isArray(data.customRecipients)) {
+    announcement.customRecipients = data.customRecipients;
+  }
+  if (data.channels !== undefined && Array.isArray(data.channels)) {
+    announcement.channels = data.channels;
+  }
+  if (data.scheduledFor !== undefined) {
+    announcement.scheduledFor = data.scheduledFor ? new Date(data.scheduledFor) : null;
+  }
 
   await announcement.save();
   return announcement.populate([
     { path: 'createdBy', select: 'name email avatarUrl role' },
-    { path: 'event', select: 'title status' }
+    { path: 'event', select: 'title status' },
+    { path: 'customRecipients', select: 'name email role avatarUrl' }
   ]);
 };
 

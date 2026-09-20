@@ -23,7 +23,7 @@ const broadcastDeliverySchema = new mongoose.Schema(
     channel: {
       type: String,
       enum: {
-        values: ['in_app', 'email', 'whatsapp'],
+        values: ['in_app', 'email', 'whatsapp', 'sms', 'push'],
         message: '{VALUE} is not a valid delivery channel'
       },
       required: [true, 'Delivery channel is required'],
@@ -38,7 +38,7 @@ const broadcastDeliverySchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['queued', 'sent', 'delivered', 'failed', 'simulated'],
+        values: ['queued', 'sent', 'delivered', 'failed', 'simulated', 'skipped', 'not_configured'],
         message: '{VALUE} is not a valid broadcast delivery status'
       },
       default: 'queued',

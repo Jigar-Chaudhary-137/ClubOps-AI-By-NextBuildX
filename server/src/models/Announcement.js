@@ -44,11 +44,29 @@ const announcementSchema = new mongoose.Schema(
     },
     targetAudience: {
       type: String,
-      enum: {
-        values: ['all', 'organizers', 'volunteers', 'members'],
-        message: '{VALUE} is not a valid audience'
-      },
       default: 'all'
+    },
+    targetAudiences: {
+      type: [String],
+      default: ['Entire Club']
+    },
+    customRecipients: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    ],
+    channels: {
+      type: [String],
+      default: ['in_app']
+    },
+    deliveryStats: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    scheduledFor: {
+      type: Date,
+      default: null
     },
     publishedAt: {
       type: Date,

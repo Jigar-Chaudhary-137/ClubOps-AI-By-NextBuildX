@@ -8,6 +8,12 @@ const router = express.Router();
 // Apply authentication to all announcement routes
 router.use(authenticate);
 
+// Preview Recipients & Live Channel Availability
+router.post('/preview-recipients', announcementController.previewRecipients);
+
+// Club Members (for Custom Audience picker)
+router.get('/club-members', announcementController.getClubMembers);
+
 // List and Create
 router.get('/', announcementController.getAnnouncements);
 router.post('/', authorize('admin', 'organizer'), announcementController.createAnnouncement);
