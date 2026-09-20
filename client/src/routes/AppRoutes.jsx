@@ -5,8 +5,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import AuthLayout from '../layouts/AuthLayout';
 
+// Route Guards
+import ProtectedRoute from './ProtectedRoute';
+import PublicRoute from './PublicRoute';
+
 // Pages
 import LoginPage from '../pages/auth/LoginPage';
+import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import EventsPage from '../pages/events/EventsPage';
 import EventDetailsPage from '../pages/events/EventDetailsPage';
@@ -31,30 +36,35 @@ export default function AppRoutes() {
       {/* Root redirects to Dashboard */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      {/* Auth routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
+      {/* Public Auth routes */}
+      <Route element={<PublicRoute />}>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
       </Route>
 
-      {/* Workspace App routes */}
-      <Route element={<AppLayout />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:eventId" element={<EventDetailsPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
-        <Route path="/volunteers" element={<VolunteersPage />} />
-        <Route path="/volunteers/:volunteerId" element={<VolunteerDetailsPage />} />
-        <Route path="/meetings" element={<MeetingsPage />} />
-        <Route path="/meetings/:meetingId" element={<MeetingDetailsPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/documents/:documentId" element={<DocumentDetailsPage />} />
-        <Route path="/risks" element={<RisksPage />} />
-        <Route path="/risks/:riskId" element={<RiskDetailsPage />} />
-        <Route path="/announcements" element={<AnnouncementsPage />} />
-        <Route path="/announcements/:announcementId" element={<AnnouncementDetailsPage />} />
-        <Route path="/ai" element={<AICommandCenterPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+      {/* Protected Workspace App routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId" element={<EventDetailsPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
+          <Route path="/volunteers" element={<VolunteersPage />} />
+          <Route path="/volunteers/:volunteerId" element={<VolunteerDetailsPage />} />
+          <Route path="/meetings" element={<MeetingsPage />} />
+          <Route path="/meetings/:meetingId" element={<MeetingDetailsPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/documents/:documentId" element={<DocumentDetailsPage />} />
+          <Route path="/risks" element={<RisksPage />} />
+          <Route path="/risks/:riskId" element={<RiskDetailsPage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/announcements/:announcementId" element={<AnnouncementDetailsPage />} />
+          <Route path="/ai" element={<AICommandCenterPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
     </Routes>
   );
