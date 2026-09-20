@@ -45,6 +45,16 @@ export const aiService = {
     return response.data;
   },
 
+  async extractActions(payload) {
+    const response = await apiClient.post('/ai/extract-actions', typeof payload === 'string' ? { text: payload } : payload);
+    return response.data;
+  },
+
+  async processMeeting(meetingId, rawTranscriptText = '') {
+    const response = await apiClient.post(`/ai/process-meeting/${meetingId}`, { rawTranscriptText });
+    return response.data;
+  },
+
   async applyMeetingActions(meetingId, options = {}) {
     const response = await apiClient.post(`/ai/meetings/${meetingId}/apply-actions`, options);
     return response.data;

@@ -45,7 +45,7 @@ const taskSchema = new mongoose.Schema(
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
-      required: [true, 'Associated event is required'],
+      default: null,
       index: true
     },
     club: {

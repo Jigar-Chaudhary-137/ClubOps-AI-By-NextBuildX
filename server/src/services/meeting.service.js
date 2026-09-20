@@ -13,37 +13,94 @@ const createMeeting = async (clubId, userId, data) => {
   }
 
   let eventId = null;
-  if (data.event) {
+  if (data.event && data.event !== 'none' && data.event !== '') {
     validateObjectId(data.event, 'event ID');
     const event = await Event.findOne({ _id: data.event, club: clubId });
     if (!event) {
       throw new AppError('Event not found or does not belong to your club', 404);
     }
-    eventId = data.event;
+    eventId = event._id;
   }
 
-  let validatedParticipants = [];
-  if (data.participants && Array.isArray(data.participants)) {
-    for (const pId of data.participants) {
-      validateObjectId(pId, 'participant user ID');
-      const user = await User.findOne({ _id: pId, club: clubId });
-      if (!user) {
-        throw new AppError(`Participant user ${pId} not found in your club`, 400);
-      }
-      validatedParticipants.push(pId);
+  // Parse Date & Time
+  let scheduledAt = new Date();
+  if (data.scheduledAt) {
+    scheduledAt = new Date(data.scheduledAt);
+  } else if (data.date) {
+    let dateStr = data.date.trim();
+    // Handle DD-MM-YYYY vs YYYY-MM-DD
+    if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+      const [d, m, y] = dateStr.split('-');
+      dateStr = `${y}-${m}-${d}`;
     }
+    const timeStr = data.startTime && data.startTime.trim() ? data.startTime.trim() : '10:00';
+    scheduledAt = new Date(`${dateStr}T${timeStr.length === 5 ? timeStr + ':00' : timeStr}`);
+    if (isNaN(scheduledAt.getTime())) {
+      scheduledAt = new Date();
+    }
+  }
+
+  // Calculate Duration
+  let durationMinutes = Number(data.durationMinutes) || 60;
+  if (data.startTime && data.endTime) {
+    try {
+      const [sh, sm] = data.startTime.split(':').map(Number);
+      const [eh, em] = data.endTime.split(':').map(Number);
+      const diff = (eh * 60 + em) - (sh * 60 + sm);
+      if (diff > 0) {
+        durationMinutes = diff;
+      }
+    } catch (e) {
+      // Keep default
+    }
+  }
+
+  // Resolve Participants (handles ObjectIds, emails, or user objects)
+  let rawParticipants = Array.isArray(data.participants)
+    ? data.participants
+    : (Array.isArray(data.attendees) ? data.attendees : []);
+
+  let validatedParticipants = [];
+  if (rawParticipants.length > 0) {
+    for (const p of rawParticipants) {
+      if (!p) continue;
+      const pStr = typeof p === 'object' ? (p._id || p.id || p.email) : String(p).trim();
+      if (!pStr) continue;
+
+      if (/^[0-9a-fA-F]{24}$/.test(pStr)) {
+        const user = await User.findOne({ _id: pStr, club: clubId });
+        if (user && !validatedParticipants.includes(user._id.toString())) {
+          validatedParticipants.push(user._id);
+        }
+      } else if (pStr.includes('@')) {
+        // Resolve email to user in the club
+        const user = await User.findOne({ email: pStr.toLowerCase(), club: clubId });
+        if (user && !validatedParticipants.includes(user._id.toString())) {
+          validatedParticipants.push(user._id);
+        }
+      }
+    }
+  }
+
+  // Parse Agenda
+  let agendaList = [];
+  if (Array.isArray(data.agenda)) {
+    agendaList = data.agenda.map(a => String(a).trim()).filter(Boolean);
+  } else if (typeof data.agenda === 'string' && data.agenda.trim()) {
+    agendaList = data.agenda.split('\n').map(a => a.trim().replace(/^[-*•\d.]+\s*/, '')).filter(Boolean);
   }
 
   const meeting = new Meeting({
     title: data.title.trim(),
-    description: data.description ? data.description.trim() : '',
+    description: data.description ? data.description.trim() : (data.notes ? data.notes.trim() : ''),
+    type: data.type || 'Planning',
     event: eventId,
     club: clubId,
-    scheduledAt: data.scheduledAt || new Date(),
-    durationMinutes: data.durationMinutes || 60,
-    location: data.location || 'Online',
+    scheduledAt,
+    durationMinutes,
+    location: data.location ? data.location.trim() : 'Online',
     participants: validatedParticipants,
-    agenda: Array.isArray(data.agenda) ? data.agenda : [],
+    agenda: agendaList,
     notes: data.notes || '',
     transcript: data.transcript || '',
     createdBy: userId
