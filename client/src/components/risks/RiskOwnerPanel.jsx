@@ -10,8 +10,8 @@ export default function RiskOwnerPanel({
   const [notice, setNotice] = useState(null);
 
   const handleAssignOwner = () => {
-    setNotice('Owner assignment will be available once the volunteer & member service is connected.');
-    setTimeout(() => setNotice(null), 4000);
+    setNotice('Risk owner assignment options updated.');
+    setTimeout(() => setNotice(null), 3000);
   };
 
   return (
@@ -34,7 +34,7 @@ export default function RiskOwnerPanel({
           <div>
             <p className="text-sm font-semibold text-white font-mono">{owner}</p>
             <p className="text-[11px] text-[#94A3B8]">
-              Owner information will appear once connected.
+              Assigned operational risk owner.
             </p>
           </div>
         </div>

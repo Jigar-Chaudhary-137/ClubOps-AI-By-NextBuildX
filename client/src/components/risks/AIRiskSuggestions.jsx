@@ -27,8 +27,8 @@ export default function AIRiskSuggestions({
           <div className="py-6 border-2 border-dashed border-[#263247] rounded-xl bg-[#111827]/40 flex flex-col items-center justify-center text-center p-4">
             <EmptyState
               icon={<Sparkles className="w-7 h-7 text-[#8B5CF6]" />}
-              title="AI suggestions will appear here after the Gemini risk analysis service is connected."
-              description="Future AI recommendations will suggest contingency options, backup vendors, and buffer days."
+              title="No AI countermeasures available yet."
+              description="Run AI Risk Analysis on your events to generate targeted mitigations and contingency plans."
             />
           </div>
         ) : (
@@ -36,13 +36,15 @@ export default function AIRiskSuggestions({
             {suggestions.map((sugg, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-[#111827] border border-[#263247] space-y-1.5"
+                className="p-3.5 rounded-xl bg-[#111827] border border-[#263247] space-y-1.5 hover:border-[#374151] transition-colors"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-white">{sugg.title}</span>
-                  <Badge variant="primary" size="sm">{sugg.type}</Badge>
+                  <Badge variant={sugg.severity === 'critical' || sugg.severity === 'high' ? 'danger' : 'primary'} size="sm">
+                    {sugg.type || sugg.severity || 'Mitigation'}
+                  </Badge>
                 </div>
-                <p className="text-xs text-[#94A3B8]">{sugg.description}</p>
+                <p className="text-xs text-[#94A3B8] leading-relaxed">{sugg.description || sugg.mitigationPlan || sugg.reasoning}</p>
               </div>
             ))}
           </div>

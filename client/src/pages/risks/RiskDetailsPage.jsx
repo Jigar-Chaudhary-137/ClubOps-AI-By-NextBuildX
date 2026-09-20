@@ -125,7 +125,7 @@ export default function RiskDetailsPage() {
 
         <div className="flex items-center gap-2">
           <Badge variant="neutral">ID: #{risk._id ? risk._id.substring(0, 8) : riskId}</Badge>
-          <Badge variant="primary" dot>MongoDB Connected</Badge>
+          <Badge variant="primary" dot>Active Risk Record</Badge>
         </div>
       </div>
 

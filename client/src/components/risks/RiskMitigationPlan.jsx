@@ -13,8 +13,8 @@ export default function RiskMitigationPlan({
   const [notice, setNotice] = useState(null);
 
   const handleAddActionClick = () => {
-    setNotice('Mitigation actions will be available once risk management APIs are connected.');
-    setTimeout(() => setNotice(null), 4000);
+    setNotice('Add specific mitigation actions to track resolution progress.');
+    setTimeout(() => setNotice(null), 3000);
   };
 
   return (

@@ -30,7 +30,7 @@ export default function RiskDetailsPanel({
           </p>
           {description === '—' && (
             <p className="text-xs text-[#94A3B8] italic">
-              Risk information will appear once connected to the risk service.
+              No additional description provided for this risk item.
             </p>
           )}
         </div>
