@@ -61,6 +61,12 @@ const TOOL_REGISTRY = {
     executor: toolExecutors.send_broadcast_alert,
     mutatesData: true,
     requiresConfirmation: true
+  },
+  broadcast_announcement: {
+    declaration: toolDeclarations.find((t) => t.name === 'send_broadcast_alert'),
+    executor: toolExecutors.broadcast_announcement,
+    mutatesData: true,
+    requiresConfirmation: true
   }
 };
 

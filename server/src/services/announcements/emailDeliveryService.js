@@ -3,8 +3,15 @@
  * Dedicated integration for transactional club announcement emails.
  */
 
-const sgMail = require('@sendgrid/mail');
 const config = require('../../config/env');
+
+const getSgMail = () => {
+  try {
+    return require('@sendgrid/mail');
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Validates SendGrid configuration.
@@ -145,6 +152,18 @@ const sendEmail = async ({ recipient, announcement, clubName, isDryRun = false, 
       destinationType: 'email',
       errorCode: 'PROVIDER_NOT_CONFIGURED',
       errorMessage: 'SendGrid API key or sender email is not configured in server environment',
+      sentAt: null
+    };
+  }
+
+  const sgMail = getSgMail();
+  if (!sgMail) {
+    return {
+      status: 'failed',
+      provider: 'SendGrid',
+      destinationType: 'email',
+      errorCode: 'SENDGRID_NOT_INSTALLED',
+      errorMessage: '@sendgrid/mail package is not installed',
       sentAt: null
     };
   }

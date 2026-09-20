@@ -76,3 +76,38 @@ Vector Semantic Search & RAG Synthesis with Verified Citations
 * `OCR_TIMEOUT_MS`: Timeout for multimodal vision requests (default: `30000ms`).
 * `OCR_DIGITAL_TEXT_THRESHOLD`: Character threshold to classify PDFs as scanned (default: `30`).
 
+## WhatsApp Delivery & Multi-Channel Broadcast Engine
+ClubOps AI provides enterprise-grade multi-channel broadcasting with dedicated WhatsApp dispatch, delivery funnel tracking, and real-time SSE updates.
+
+### Supported Modes
+1. **Live Cloud API Mode (`WHATSAPP_PROVIDER=cloud_api`)**:
+   - Integrates with Meta WhatsApp Cloud API (`https://graph.facebook.com/v19.0/{PHONE_ID}/messages`).
+   - Dispatches formatted WhatsApp messages with bold headers, emojis, and deep links.
+2. **High-Fidelity Sandbox Simulator Mode (`WHATSAPP_PROVIDER=simulator`)**:
+   - Automatically selected when external credentials are absent.
+   - Generates realistic `wamid.HB...` message IDs.
+   - Simulates lifecycle transitions: `queued` → `sent` → `delivered` → `read`.
+   - Emits real-time SSE events without making external API calls.
+
+### Delivery Lifecycle & State Machine
+```
+queued ──► sent ──► delivered ──► read
+   │          │
+   └──► failed ◄──┘
+```
+
+### Key API Endpoints
+* `GET /api/notifications/whatsapp/webhook` — Meta challenge verification endpoint (`hub.mode`, `hub.verify_token`, `hub.challenge`).
+* `POST /api/notifications/whatsapp/webhook` — Provider status callback receiver.
+* `GET /api/announcements/:id/deliveries` — Authenticated, club-scoped recipient delivery logs and funnel stats.
+* `POST /api/announcements/:id/retry-delivery` — Authenticated retry of failed/queued deliveries.
+
+### Configuration
+* `WHATSAPP_PROVIDER`: `cloud_api` | `simulator` | `twilio`
+* `WHATSAPP_API_TOKEN`: Meta Graph API user access token.
+* `WHATSAPP_PHONE_NUMBER_ID`: WhatsApp Business phone number ID.
+* `WHATSAPP_BUSINESS_ACCOUNT_ID`: Meta WABA account ID.
+* `WHATSAPP_VERIFY_TOKEN`: Webhook verification token.
+* `WHATSAPP_DEFAULT_COUNTRY_CODE`: Country code for local 10-digit number normalization (default: `91`).
+
+

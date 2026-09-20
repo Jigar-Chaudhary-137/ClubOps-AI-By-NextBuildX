@@ -3,8 +3,19 @@
  * Dedicated integration for carrier SMS announcements.
  */
 
-const twilio = require('twilio');
 const config = require('../../config/env');
+
+const getTwilioClient = () => {
+  try {
+    const twilio = require('twilio');
+    if (config.twilioAccountSid && config.twilioAuthToken) {
+      return twilio(config.twilioAccountSid, config.twilioAuthToken);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Normalizes a phone number to standard E.164 format.
@@ -132,7 +143,18 @@ const sendSms = async ({ recipient, announcement, clubName, isDryRun = false, ma
     };
   }
 
-  const client = twilio(config.twilioAccountSid, config.twilioAuthToken);
+  const client = getTwilioClient();
+  if (!client) {
+    return {
+      status: 'failed',
+      provider: 'Twilio SMS',
+      destinationType: 'phone',
+      errorCode: 'TWILIO_NOT_INSTALLED',
+      errorMessage: 'twilio package is not installed',
+      sentAt: null
+    };
+  }
+
   const smsBody = `[${clubName || 'ClubOps'}] ${announcement.title}\n\n${announcement.content}`.substring(0, 1500);
 
   let attempt = 0;

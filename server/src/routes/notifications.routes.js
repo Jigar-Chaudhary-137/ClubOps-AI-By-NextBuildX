@@ -1,10 +1,15 @@
 const express = require('express');
 const notificationController = require('../controllers/notification.controller');
+const whatsappController = require('../controllers/whatsapp.controller');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply authentication to all notification routes
+// Public WhatsApp Webhook Endpoints (Meta challenge & status callbacks)
+router.get('/whatsapp/webhook', whatsappController.verifyWebhook);
+router.post('/whatsapp/webhook', whatsappController.handleWebhook);
+
+// Apply authentication to protected notification routes
 router.use(authenticate);
 
 // Real-Time SSE Stream (must be before :id routes)

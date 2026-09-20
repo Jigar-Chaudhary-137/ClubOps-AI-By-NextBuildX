@@ -565,6 +565,11 @@ const toolExecutors = {
         error: { code: 'BROADCAST_FAILED', message: err.message }
       };
     }
+  },
+
+  // Alias for broadcast_announcement
+  broadcast_announcement: async (args, context) => {
+    return toolExecutors.send_broadcast_alert(args, context);
   }
 };
 
@@ -572,3 +577,4 @@ module.exports = {
   toolExecutors,
   resolveAssignee
 };
+

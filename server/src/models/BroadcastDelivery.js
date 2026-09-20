@@ -35,13 +35,17 @@ const broadcastDeliverySchema = new mongoose.Schema(
       required: [true, 'Recipient user is required'],
       index: true
     },
+    phone: {
+      type: String,
+      default: null
+    },
     status: {
       type: String,
       enum: {
-        values: ['pending', 'accepted', 'sent', 'delivered', 'failed', 'skipped', 'not_configured', 'simulated', 'queued'],
+        values: ['queued', 'sent', 'delivered', 'read', 'failed', 'pending', 'accepted', 'skipped', 'not_configured', 'simulated'],
         message: '{VALUE} is not a valid broadcast delivery status'
       },
-      default: 'pending',
+      default: 'queued',
       index: true
     },
     provider: {
@@ -54,13 +58,18 @@ const broadcastDeliverySchema = new mongoose.Schema(
     },
     providerMessageId: {
       type: String,
-      default: null
+      default: null,
+      index: true
     },
     errorCode: {
       type: String,
       default: null
     },
     errorMessage: {
+      type: String,
+      default: null
+    },
+    failureReason: {
       type: String,
       default: null
     },
@@ -80,11 +89,23 @@ const broadcastDeliverySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {}
     },
+    queuedAt: {
+      type: Date,
+      default: Date.now
+    },
     sentAt: {
       type: Date,
       default: null
     },
     deliveredAt: {
+      type: Date,
+      default: null
+    },
+    readAt: {
+      type: Date,
+      default: null
+    },
+    failedAt: {
       type: Date,
       default: null
     }
@@ -106,6 +127,9 @@ broadcastDeliverySchema.index(
   { unique: true }
 );
 
+broadcastDeliverySchema.index({ club: 1, announcement: 1 });
+broadcastDeliverySchema.index({ club: 1, providerMessageId: 1 });
+broadcastDeliverySchema.index({ club: 1, status: 1 });
 broadcastDeliverySchema.index({ club: 1, createdAt: -1 });
 broadcastDeliverySchema.index({ event: 1, createdAt: -1 });
 

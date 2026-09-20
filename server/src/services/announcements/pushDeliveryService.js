@@ -3,7 +3,6 @@
  * Dedicated integration for web and mobile push notifications using Firebase Admin SDK.
  */
 
-const admin = require('firebase-admin');
 const config = require('../../config/env');
 const User = require('../../models/User');
 
@@ -33,9 +32,10 @@ const getFirebaseAdmin = () => {
   const { isConfigured } = validateConfiguration();
   if (!isConfigured) return null;
 
-  if (!firebaseApp) {
-    try {
-      if (admin.apps.length > 0) {
+  try {
+    const admin = require('firebase-admin');
+    if (!firebaseApp) {
+      if (admin.apps && admin.apps.length > 0) {
         firebaseApp = admin.app();
       } else {
         firebaseApp = admin.initializeApp({
@@ -46,12 +46,11 @@ const getFirebaseAdmin = () => {
           })
         });
       }
-    } catch (err) {
-      console.error('[Firebase] Failed to initialize Firebase Admin SDK:', err.message);
-      return null;
     }
+    return admin;
+  } catch (err) {
+    return null;
   }
-  return firebaseApp;
 };
 
 /**

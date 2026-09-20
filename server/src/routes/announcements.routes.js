@@ -3,6 +3,8 @@ const announcementController = require('../controllers/announcement.controller')
 const { authenticate } = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
 
+const whatsappController = require('../controllers/whatsapp.controller');
+
 const router = express.Router();
 
 // Apply authentication to all announcement routes
@@ -23,6 +25,10 @@ router.get('/club-members', announcementController.getClubMembers);
 // List and Create
 router.get('/', announcementController.getAnnouncements);
 router.post('/', authorize('admin', 'organizer'), announcementController.createAnnouncement);
+
+// Delivery Tracking & Retries
+router.get('/:id/deliveries', whatsappController.getAnnouncementDeliveries);
+router.post('/:id/retry-delivery', authorize('admin', 'organizer'), whatsappController.retryAnnouncementDelivery);
 
 // Single Announcement
 router.get('/:id', announcementController.getAnnouncementById);

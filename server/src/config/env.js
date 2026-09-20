@@ -39,6 +39,17 @@ const config = {
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || null,
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || null,
   firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : null,
+  // WhatsApp Provider & Simulator Configuration
+  whatsappProvider: process.env.WHATSAPP_PROVIDER || (process.env.WHATSAPP_API_TOKEN ? 'cloud_api' : 'simulator'),
+  whatsappApiToken: process.env.WHATSAPP_API_TOKEN || null,
+  whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || null,
+  whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || null,
+  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'clubops_verify_token_2026',
+  whatsappAppSecret: process.env.WHATSAPP_APP_SECRET || null,
+  whatsappDefaultCountryCode: process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '91',
+  whatsappSimulatedSentDelayMs: parseInt(process.env.WHATSAPP_SIMULATED_SENT_DELAY_MS, 10) || 300,
+  whatsappSimulatedDeliveredDelayMs: parseInt(process.env.WHATSAPP_SIMULATED_DELIVERED_DELAY_MS, 10) || 700,
+  whatsappSimulatedReadDelayMs: parseInt(process.env.WHATSAPP_SIMULATED_READ_DELAY_MS, 10) || 1200,
   isProduction,
   isDevelopment
 };
