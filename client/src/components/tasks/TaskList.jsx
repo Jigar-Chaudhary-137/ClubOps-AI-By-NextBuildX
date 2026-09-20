@@ -66,7 +66,7 @@ export default function TaskList({
           <tbody>
             {tasks.map((task) => (
               <TaskRow
-                key={task.id}
+                key={task._id || task.id}
                 task={task}
                 onView={onViewTask}
               />

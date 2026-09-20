@@ -53,7 +53,7 @@ export default function MeetingList({
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
         {meetings.map((meeting) => (
           <MeetingCard
-            key={meeting.id}
+            key={meeting._id || meeting.id}
             meeting={meeting}
             onView={onViewMeeting}
           />
@@ -82,7 +82,7 @@ export default function MeetingList({
           <tbody>
             {meetings.map((meeting) => (
               <MeetingRow
-                key={meeting.id}
+                key={meeting._id || meeting.id}
                 meeting={meeting}
                 onView={onViewMeeting}
               />

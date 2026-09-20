@@ -11,17 +11,38 @@ export default function TaskRow({
 }) {
   if (!task) return null;
 
-  const {
-    id,
-    title = 'Untitled Task',
-    status = 'To Do',
-    priority = 'Medium',
-    assignee = 'Unassigned',
-    event = '—',
-    dueDate = '—',
-    updatedAt = '—',
-    aiGenerated = false
-  } = task;
+  const id = task._id || task.id;
+  const title = task.title || 'Untitled Task';
+  const status = task.status || 'To Do';
+  const priority = task.priority || 'Medium';
+
+  // Safely extract assignee display name
+  const assigneeDisplay = typeof task.assignee === 'object' && task.assignee !== null
+    ? (task.assignee.name || task.assignee.email || 'Unassigned')
+    : typeof task.assignedTo === 'object' && task.assignedTo !== null
+      ? (task.assignedTo.name || task.assignedTo.email || 'Unassigned')
+      : (task.assignee || task.assignedTo || 'Unassigned');
+
+  // Safely extract event display name
+  const eventDisplay = typeof task.event === 'object' && task.event !== null
+    ? (task.event.title || task.event.name || '—')
+    : (task.event || '—');
+
+  // Safely extract due date
+  const dueDateDisplay = task.dueDate && task.dueDate !== '—'
+    ? (typeof task.dueDate === 'string' && task.dueDate.includes('T')
+        ? new Date(task.dueDate).toLocaleDateString()
+        : task.dueDate)
+    : '—';
+
+  // Safely extract updated date
+  const updatedAtDisplay = task.updatedAt && task.updatedAt !== '—'
+    ? (typeof task.updatedAt === 'string' && task.updatedAt.includes('T')
+        ? new Date(task.updatedAt).toLocaleDateString()
+        : task.updatedAt)
+    : '—';
+
+  const aiGenerated = Boolean(task.aiGenerated);
 
   return (
     <tr className="border-b border-[#263247]/60 hover:bg-[#151D2E]/80 transition-colors">
@@ -56,7 +77,7 @@ export default function TaskRow({
       <td className="py-3 px-4 text-xs text-[#94A3B8] whitespace-nowrap">
         <div className="flex items-center gap-1.5">
           <User className="w-3.5 h-3.5 text-[#64748B]" />
-          <span>{assignee}</span>
+          <span>{assigneeDisplay}</span>
         </div>
       </td>
 
@@ -64,7 +85,7 @@ export default function TaskRow({
       <td className="py-3 px-4 text-xs text-[#94A3B8] whitespace-nowrap">
         <div className="flex items-center gap-1.5">
           <Tag className="w-3.5 h-3.5 text-[#64748B]" />
-          <span>{event}</span>
+          <span>{eventDisplay}</span>
         </div>
       </td>
 
@@ -72,13 +93,13 @@ export default function TaskRow({
       <td className="py-3 px-4 text-xs text-[#94A3B8] whitespace-nowrap">
         <div className="flex items-center gap-1.5 font-mono">
           <Calendar className="w-3.5 h-3.5 text-[#64748B]" />
-          <span>{dueDate}</span>
+          <span>{dueDateDisplay}</span>
         </div>
       </td>
 
       {/* Last Updated */}
       <td className="py-3 px-4 text-xs text-[#64748B] whitespace-nowrap font-mono">
-        {updatedAt}
+        {updatedAtDisplay}
       </td>
 
       {/* Actions */}
@@ -95,3 +116,4 @@ export default function TaskRow({
     </tr>
   );
 }
+

@@ -87,9 +87,35 @@ export default function MeetingsPage() {
       if (eventFilter !== 'all') params.event = eventFilter;
 
       const res = await getMeetings(params);
-      const meetingList = Array.isArray(res?.data)
+      const rawList = Array.isArray(res?.data)
         ? res.data
-        : (res?.data?.meetings || res?.meetings || []);
+        : (res?.data?.meetings || res?.meetings || (Array.isArray(res) ? res : []));
+
+      const meetingList = rawList.map((m) => {
+        const id = m._id || m.id;
+        const eventTitle = typeof m.event === 'object' && m.event !== null
+          ? (m.event.title || m.event.name || '—')
+          : (m.event || '—');
+        const formattedDate = m.scheduledAt
+          ? new Date(m.scheduledAt).toLocaleDateString()
+          : (m.date || '—');
+        const processingStatus = m.aiProcessed || m.actionItemsExtracted
+          ? 'Processed'
+          : (m.processingStatus || 'Not Processed');
+        const actionItemCount = Array.isArray(m.extractedItems)
+          ? m.extractedItems.length
+          : (m.actionItemCount || 0);
+
+        return {
+          ...m,
+          id,
+          event: eventTitle,
+          date: formattedDate,
+          processingStatus,
+          actionItemCount,
+          riskCount: m.riskCount || 0
+        };
+      });
 
       // Client-side filtering for type & status if applicable
       let filtered = meetingList;
@@ -97,18 +123,18 @@ export default function MeetingsPage() {
         filtered = filtered.filter(m => (m.type || 'Planning').toLowerCase() === typeFilter.toLowerCase());
       }
       if (statusFilter === 'Processed') {
-        filtered = filtered.filter(m => m.aiProcessed || m.actionItemsExtracted);
+        filtered = filtered.filter(m => m.aiProcessed || m.actionItemsExtracted || m.processingStatus === 'Processed');
       } else if (statusFilter === 'Not Processed') {
-        filtered = filtered.filter(m => !m.aiProcessed && !m.actionItemsExtracted);
+        filtered = filtered.filter(m => !m.aiProcessed && !m.actionItemsExtracted && m.processingStatus !== 'Processed');
       }
 
       // Sort
       if (sortBy === 'date') {
-        filtered.sort((a, b) => new Date(b.scheduledAt || b.createdAt) - new Date(a.scheduledAt || a.createdAt));
+        filtered.sort((a, b) => new Date(b.scheduledAt || b.createdAt || 0) - new Date(a.scheduledAt || a.createdAt || 0));
       } else if (sortBy === 'name') {
         filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
       } else {
-        filtered.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+        filtered.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
       }
 
       setMeetings(filtered);

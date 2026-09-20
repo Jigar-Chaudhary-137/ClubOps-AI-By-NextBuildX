@@ -105,23 +105,92 @@ export default function TasksPage() {
       if (eventFilter !== 'all') params.event = eventFilter;
 
       const res = await getTasks(params);
-      let taskList = Array.isArray(res?.data)
+      const rawList = Array.isArray(res?.data)
         ? res.data
-        : (res?.data?.tasks || res?.tasks || []);
+        : (res?.data?.tasks || res?.tasks || (Array.isArray(res) ? res : []));
+
+      const statusDisplayMap = {
+        todo: 'To Do',
+        in_progress: 'In Progress',
+        review: 'In Review',
+        completed: 'Completed',
+        cancelled: 'Blocked'
+      };
+
+      const taskList = rawList.map((t) => {
+        const id = t._id || t.id;
+        const assigneeDisplay = typeof t.assignee === 'object' && t.assignee !== null
+          ? (t.assignee.name || t.assignee.email || 'Unassigned')
+          : typeof t.assignedTo === 'object' && t.assignedTo !== null
+            ? (t.assignedTo.name || t.assignedTo.email || 'Unassigned')
+            : (t.assignee || t.assignedTo || 'Unassigned');
+
+        const eventDisplay = typeof t.event === 'object' && t.event !== null
+          ? (t.event.title || t.event.name || null)
+          : (t.event || null);
+
+        const formattedDueDate = t.dueDate
+          ? new Date(t.dueDate).toLocaleDateString()
+          : null;
+
+        const formattedUpdated = t.updatedAt
+          ? new Date(t.updatedAt).toLocaleDateString()
+          : (t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—');
+
+        const normalizedStatus = statusDisplayMap[t.status] || (
+          t.status
+            ? t.status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            : 'To Do'
+        );
+
+        const normalizedPriority = t.priority
+          ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1).toLowerCase()
+          : 'Medium';
+
+        const isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed';
+
+        return {
+          ...t,
+          id,
+          title: t.title || 'Untitled Task',
+          assignee: assigneeDisplay,
+          event: eventDisplay,
+          dueDate: formattedDueDate,
+          updatedAt: formattedUpdated,
+          status: normalizedStatus,
+          priority: normalizedPriority,
+          isOverdue,
+          aiGenerated: Boolean(t.aiGenerated)
+        };
+      });
+
+      // Client-side filtering if backend didn't filter
+      let filtered = taskList;
+      if (statusFilter !== 'all') {
+        const targetStatusKey = statusFilter.toLowerCase().replace(/[\s_-]+/g, '');
+        filtered = filtered.filter(t => {
+          const s = (t.status || '').toLowerCase().replace(/[\s_-]+/g, '');
+          return s === targetStatusKey || (t.rawStatus && t.rawStatus.toLowerCase() === targetStatusKey);
+        });
+      }
+
+      if (priorityFilter !== 'all') {
+        filtered = filtered.filter(t => (t.priority || '').toLowerCase() === priorityFilter.toLowerCase());
+      }
 
       // Client-side sort mapping
       if (sortBy === 'dueDate') {
-        taskList.sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
+        filtered.sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
       } else if (sortBy === 'priority') {
         const pOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        taskList.sort((a, b) => (pOrder[b.priority] || 0) - (pOrder[a.priority] || 0));
+        filtered.sort((a, b) => (pOrder[(b.priority || '').toLowerCase()] || 0) - (pOrder[(a.priority || '').toLowerCase()] || 0));
       } else if (sortBy === 'created') {
-        taskList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       } else {
-        taskList.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+        filtered.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
       }
 
-      setTasks(taskList);
+      setTasks(filtered);
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
       setError(normalizeApiError(err, 'Failed to load tasks. Please check your session.'));

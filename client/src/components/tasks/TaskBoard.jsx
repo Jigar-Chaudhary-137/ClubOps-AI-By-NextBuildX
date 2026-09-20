@@ -19,7 +19,15 @@ export default function TaskBoard({
     <div className={`overflow-x-auto pb-4 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-full xl:min-w-0">
         {columns.map((col) => {
-          const colTasks = tasks.filter((t) => t.status === col.id);
+          const colKey = col.id.toLowerCase().replace(/[\s_-]+/g, '');
+          const colTasks = tasks.filter((t) => {
+            const rawStatus = (t.status || 'To Do').toLowerCase().replace(/[\s_-]+/g, '');
+            if (colKey === 'todo') return rawStatus === 'todo' || rawStatus === 'pending';
+            if (colKey === 'inprogress') return rawStatus === 'inprogress' || rawStatus === 'inreview' || rawStatus === 'review';
+            if (colKey === 'completed') return rawStatus === 'completed' || rawStatus === 'done';
+            if (colKey === 'blocked') return rawStatus === 'blocked' || rawStatus === 'cancelled';
+            return rawStatus === colKey;
+          });
 
           return (
             <div
@@ -64,7 +72,7 @@ export default function TaskBoard({
                 ) : (
                   colTasks.map((task) => (
                     <TaskCard
-                      key={task.id}
+                      key={task._id || task.id}
                       task={task}
                       onView={onViewTask}
                     />

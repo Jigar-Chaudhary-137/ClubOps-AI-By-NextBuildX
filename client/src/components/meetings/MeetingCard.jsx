@@ -11,18 +11,38 @@ export default function MeetingCard({
 }) {
   if (!meeting) return null;
 
-  const {
-    id,
-    title = 'Untitled Meeting',
-    type = 'Planning',
-    date = '—',
-    event = '—',
-    participantCount = 0,
-    processingStatus = 'Not Processed',
-    actionItemCount = 0,
-    riskCount = 0,
-    hasIntelligence = false
-  } = meeting;
+  const id = meeting._id || meeting.id;
+  const title = meeting.title || 'Untitled Meeting';
+  const type = meeting.type || 'Planning';
+  
+  // Safely extract event name
+  const eventDisplay = typeof meeting.event === 'object' && meeting.event !== null
+    ? (meeting.event.title || meeting.event.name || '—')
+    : (meeting.event || '—');
+
+  // Safely extract date
+  const dateDisplay = meeting.date && meeting.date !== '—'
+    ? meeting.date
+    : meeting.scheduledAt
+      ? new Date(meeting.scheduledAt).toLocaleDateString()
+      : '—';
+
+  // Safely calculate participant count
+  const participants = meeting.participants;
+  const participantCount = Array.isArray(participants)
+    ? participants.length
+    : (meeting.participantCount || (typeof participants === 'object' && participants !== null ? 1 : 0));
+
+  const processingStatus = meeting.processingStatus || (
+    meeting.aiProcessed || meeting.actionItemsExtracted ? 'Processed' : 'Not Processed'
+  );
+
+  const actionItemCount = Array.isArray(meeting.extractedItems)
+    ? meeting.extractedItems.length
+    : (meeting.actionItemCount || 0);
+
+  const riskCount = meeting.riskCount || 0;
+  const hasIntelligence = Boolean(meeting.hasIntelligence || meeting.aiProcessed || meeting.actionItemsExtracted);
 
   return (
     <Card
@@ -59,15 +79,15 @@ export default function MeetingCard({
           <div className="mt-2.5 space-y-1.5 text-xs text-[#94A3B8]">
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-              <span className="truncate">{date}</span>
+              <span className="truncate">{dateDisplay}</span>
             </div>
             <div className="flex items-center gap-2">
               <Tag className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-              <span className="truncate">Event: {event}</span>
+              <span className="truncate">Event: {eventDisplay}</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-              <span className="truncate">{participantCount} Participants</span>
+              <span className="truncate">{participantCount} Participant{participantCount === 1 ? '' : 's'}</span>
             </div>
           </div>
         </div>
@@ -107,3 +127,4 @@ export default function MeetingCard({
     </Card>
   );
 }
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Calendar, Users, Tag, AlertTriangle, CheckSquare, Sparkles } from 'lucide-react';
+import { ArrowRight, Calendar, Users, Tag, AlertTriangle, CheckSquare } from 'lucide-react';
 import MeetingProcessingBadge from './MeetingProcessingBadge';
 
 export default function MeetingRow({
@@ -8,24 +8,48 @@ export default function MeetingRow({
 }) {
   if (!meeting) return null;
 
-  const {
-    id,
-    title = 'Untitled Meeting',
-    type = 'Planning',
-    event = '—',
-    date = '—',
-    participants = [],
-    processingStatus = 'Not Processed',
-    actionItemCount = 0,
-    riskCount = 0,
-    updatedAt = '—'
-  } = meeting;
+  const id = meeting._id || meeting.id;
+  const title = meeting.title || 'Untitled Meeting';
+  const type = meeting.type || 'Planning';
+  
+  // Safely extract event name
+  const eventDisplay = typeof meeting.event === 'object' && meeting.event !== null
+    ? (meeting.event.title || meeting.event.name || '—')
+    : (meeting.event || '—');
 
+  // Safely extract date
+  const dateDisplay = meeting.date && meeting.date !== '—'
+    ? meeting.date
+    : meeting.scheduledAt
+      ? new Date(meeting.scheduledAt).toLocaleDateString()
+      : '—';
+
+  // Safely extract participants
+  const participants = meeting.participants;
   const participantDisplay = Array.isArray(participants)
     ? participants.length > 0
       ? `${participants.length} participant${participants.length > 1 ? 's' : ''}`
       : 'None'
-    : participants || '—';
+    : typeof participants === 'object' && participants !== null
+      ? (participants.name || participants.email || '1 participant')
+      : (participants || '—');
+
+  // Safely determine processing status
+  const processingStatus = meeting.processingStatus || (
+    meeting.aiProcessed || meeting.actionItemsExtracted ? 'Processed' : 'Not Processed'
+  );
+
+  const actionItemCount = Array.isArray(meeting.extractedItems)
+    ? meeting.extractedItems.length
+    : (meeting.actionItemCount || 0);
+
+  const riskCount = meeting.riskCount || 0;
+
+  const updatedAtDisplay = meeting.updatedAt
+    ? (typeof meeting.updatedAt === 'string' && meeting.updatedAt.includes('T')
+        ? new Date(meeting.updatedAt).toLocaleDateString()
+        : meeting.updatedAt)
+    : '—';
 
   return (
     <tr className="border-b border-[#263247]/60 hover:bg-[#151D2E]/80 transition-colors">
@@ -40,7 +64,7 @@ export default function MeetingRow({
             {title}
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] px-2 py-0.2 rounded bg-[#111827] text-[#94A3B8] border border-[#263247] font-medium">
+            <span className="text-[11px] px-2 py-0.5 rounded bg-[#111827] text-[#94A3B8] border border-[#263247] font-medium">
               {type}
             </span>
           </div>
@@ -51,7 +75,7 @@ export default function MeetingRow({
       <td className="py-3 px-4 text-xs text-[#94A3B8] whitespace-nowrap">
         <div className="flex items-center gap-1.5">
           <Tag className="w-3.5 h-3.5 text-[#64748B]" />
-          <span>{event}</span>
+          <span>{eventDisplay}</span>
         </div>
       </td>
 
@@ -59,7 +83,7 @@ export default function MeetingRow({
       <td className="py-3 px-4 text-xs text-[#94A3B8] whitespace-nowrap">
         <div className="flex items-center gap-1.5 font-mono">
           <Calendar className="w-3.5 h-3.5 text-[#64748B]" />
-          <span>{date}</span>
+          <span>{dateDisplay}</span>
         </div>
       </td>
 
@@ -94,7 +118,7 @@ export default function MeetingRow({
 
       {/* Last Updated */}
       <td className="py-3 px-4 text-xs text-[#64748B] whitespace-nowrap font-mono">
-        {updatedAt}
+        {updatedAtDisplay}
       </td>
 
       {/* View Action */}
@@ -111,3 +135,4 @@ export default function MeetingRow({
     </tr>
   );
 }
+
