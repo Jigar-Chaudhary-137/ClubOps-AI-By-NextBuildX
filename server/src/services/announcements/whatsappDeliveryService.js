@@ -18,7 +18,7 @@ const checkHealth = async () => {
 };
 
 const sendWhatsapp = async ({ recipient, announcement, clubName, isDryRun = false, maxRetries = 2 }) => {
-  const rawPhone = recipient.phone;
+  const rawPhone = recipient.whatsappNumber || recipient.phone;
   const normalizedPhone = whatsappService.normalizePhoneNumber(rawPhone);
 
   if (!normalizedPhone) {
@@ -27,8 +27,8 @@ const sendWhatsapp = async ({ recipient, announcement, clubName, isDryRun = fals
       provider: 'whatsapp',
       destinationType: 'phone',
       errorCode: 'INVALID_PHONE_NUMBER',
-      errorMessage: 'Recipient has no phone number on profile',
-      failureReason: 'Recipient has no phone number on profile',
+      errorMessage: 'Recipient has no phone/WhatsApp number on profile',
+      failureReason: 'Recipient has no phone/WhatsApp number on profile',
       sentAt: null
     };
   }

@@ -64,22 +64,34 @@ export default function VolunteerCard({
         </div>
 
         {/* Contact Info */}
-        {(email || phone) && (
-          <div className="space-y-1 text-xs text-[#94A3B8] pt-1">
-            {email && (
-              <div className="flex items-center gap-2 truncate">
-                <Mail className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-                <span className="truncate">{email}</span>
-              </div>
-            )}
-            {phone && (
-              <div className="flex items-center gap-2 truncate">
-                <Phone className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
-                <span className="truncate">{phone}</span>
-              </div>
+        <div className="space-y-1.5 text-xs text-[#94A3B8] pt-1">
+          {email && (
+            <div className="flex items-center gap-2 truncate">
+              <Mail className="w-3.5 h-3.5 text-[#64748B] shrink-0" />
+              <span className="truncate">{email}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 truncate">
+              <Phone className={`w-3.5 h-3.5 shrink-0 ${phone ? 'text-[#22C55E]' : 'text-[#64748B]'}`} />
+              <span className={`truncate ${phone ? 'text-[#E2E8F0] font-mono' : 'text-amber-400/80 font-normal'}`}>
+                {phone ? `WhatsApp: ${phone}` : 'WhatsApp: Not added'}
+              </span>
+            </div>
+            {!phone && onView && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(volunteer.id || volunteer._id);
+                }}
+                className="text-[11px] text-[#818CF8] hover:underline shrink-0"
+              >
+                + Add
+              </button>
             )}
           </div>
-        )}
+        </div>
 
         {/* Assigned Event */}
         <div className="p-2.5 rounded-lg bg-[#111827] border border-[#263247]/70 text-xs">

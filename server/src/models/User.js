@@ -45,6 +45,11 @@ const userSchema = new mongoose.Schema(
       default: '',
       trim: true
     },
+    whatsappNumber: {
+      type: String,
+      default: '',
+      trim: true
+    },
     deviceTokens: [
       {
         token: { type: String, required: true, trim: true },

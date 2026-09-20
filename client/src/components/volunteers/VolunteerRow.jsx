@@ -17,6 +17,7 @@ export default function VolunteerRow({
     name = 'Unnamed Volunteer',
     role = 'Volunteer',
     email = '',
+    phone = '',
     availability = 'available',
     skills = [],
     assignedEvent = null,
@@ -45,11 +46,22 @@ export default function VolunteerRow({
             <span className="font-semibold text-sm text-white group-hover:text-[#818CF8] transition-colors truncate block">
               {name}
             </span>
-            {email && (
-              <span className="text-xs text-[#94A3B8] truncate block">
-                {email}
-              </span>
-            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              {email && (
+                <span className="text-xs text-[#94A3B8] truncate block">
+                  {email}
+                </span>
+              )}
+              {phone ? (
+                <span className="text-[11px] text-[#34D399] font-mono">
+                  • {phone}
+                </span>
+              ) : (
+                <span className="text-[11px] text-amber-400/70">
+                  • No WhatsApp
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </td>

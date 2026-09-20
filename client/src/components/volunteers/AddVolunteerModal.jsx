@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { UserPlus, Sparkles, Plus, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UserPlus, Sparkles, Plus, AlertCircle, Phone, MessageSquare } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Textarea from '../ui/Textarea';
@@ -30,7 +30,7 @@ const departmentOptions = [
   { value: 'Sponsorship', label: 'Sponsorship & Finance' }
 ];
 
-export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
+export default function AddVolunteerModal({ isOpen, onClose, onSave, initialData = null }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -46,6 +46,39 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          name: initialData.user?.name || initialData.name || '',
+          email: initialData.user?.email || initialData.email || '',
+          phone: initialData.user?.whatsappNumber || initialData.user?.phone || initialData.phone || '',
+          role: initialData.user?.role
+            ? initialData.user.role.charAt(0).toUpperCase() + initialData.user.role.slice(1)
+            : (initialData.role || 'Volunteer'),
+          department: initialData.department || 'General',
+          availability: initialData.availability || 'available',
+          notes: initialData.notes || ''
+        });
+        setSkills(Array.isArray(initialData.skills) ? [...initialData.skills] : []);
+      } else {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          role: 'Volunteer',
+          department: 'General',
+          availability: 'available',
+          notes: ''
+        });
+        setSkills([]);
+      }
+      setSkillInput('');
+      setErrors({});
+      setApiError(null);
+    }
+  }, [isOpen, initialData]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -106,21 +139,22 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        role: formData.role,
+        whatsappNumber: formData.phone.trim(),
+        role: formData.role.toLowerCase(),
         department: formData.department || 'General',
         availability: formData.availability,
         skills,
         notes: formData.notes.trim()
       };
-      let result;
+
       if (onSave) {
-        result = await onSave(payload);
+        await onSave(payload);
       } else {
-        result = await createVolunteer(payload);
+        await createVolunteer(payload);
       }
       handleModalClose();
     } catch (err) {
-      setApiError(err.response?.data?.message || err.message || 'Failed to create volunteer');
+      setApiError(err.response?.data?.message || err.message || 'Failed to save volunteer profile');
     } finally {
       setIsSubmitting(false);
     }
@@ -144,11 +178,13 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
     onClose?.();
   };
 
+  const isEditMode = Boolean(initialData);
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title="Add Club Volunteer"
+      title={isEditMode ? 'Edit Volunteer Profile' : 'Add Club Volunteer'}
       description="Register member capabilities, contact details, role, and availability"
       size="lg"
       footer={
@@ -171,7 +207,7 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
               onClick={handleSubmit}
               isLoading={isSubmitting}
             >
-              Add Volunteer
+              {isEditMode ? 'Save Changes' : 'Add Volunteer'}
             </Button>
           </div>
         </div>
@@ -207,16 +243,21 @@ export default function AddVolunteerModal({ isOpen, onClose, onSave }) {
           />
         </div>
 
-        {/* Phone & Role */}
+        {/* WhatsApp Number & Role */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Phone Number"
-            type="tel"
-            placeholder="+91 XXXXX XXXXX"
-            value={formData.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            disabled={isSubmitting}
-          />
+          <div>
+            <Input
+              label="WhatsApp Number"
+              type="tel"
+              placeholder="+91 98765 43210"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              disabled={isSubmitting}
+            />
+            <p className="text-[11px] text-[#64748B] mt-1">
+              Used for WhatsApp announcements. Leave blank if the volunteer does not use WhatsApp.
+            </p>
+          </div>
 
           <Select
             label="Role"

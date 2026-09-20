@@ -1,26 +1,97 @@
+const crypto = require('crypto');
 const Volunteer = require('../models/Volunteer');
 const User = require('../models/User');
 const Event = require('../models/Event');
 const Task = require('../models/Task');
+const whatsappService = require('./whatsapp.service');
 const { AppError } = require('../utils/errors');
 const { parsePagination, formatPagination, validateObjectId } = require('../utils/pagination');
 
 /**
  * Creates or registers a volunteer profile in the club.
+ * Single source of truth for contact details is the User document.
  */
 const createVolunteer = async (clubId, currentUser, data) => {
-  const targetUserId = data.user || currentUser._id;
-  validateObjectId(targetUserId, 'target user ID');
+  validateObjectId(clubId, 'club ID');
 
-  const userRecord = await User.findOne({ _id: targetUserId, club: clubId });
-  if (!userRecord) {
-    throw new AppError('User not found or does not belong to your club', 404);
+  let targetUserId = null;
+  let userRecord = null;
+
+  // Case 1: Direct user ObjectId provided
+  if (data.user) {
+    validateObjectId(data.user, 'target user ID');
+    userRecord = await User.findOne({ _id: data.user, club: clubId });
+    if (!userRecord) {
+      throw new AppError('User not found or does not belong to your club workspace', 404);
+    }
+    targetUserId = userRecord._id;
+  } 
+  // Case 2: Email provided
+  else if (data.email && typeof data.email === 'string' && data.email.trim()) {
+    const normalizedEmail = data.email.toLowerCase().trim();
+
+    // Check if user already exists within this club
+    userRecord = await User.findOne({ email: normalizedEmail, club: clubId });
+
+    if (userRecord) {
+      // User exists in this club
+      targetUserId = userRecord._id;
+
+      // Update name/phone/whatsapp if provided
+      let modified = false;
+      if (data.name && data.name.trim() && userRecord.name !== data.name.trim()) {
+        userRecord.name = data.name.trim();
+        modified = true;
+      }
+      const rawPhone = data.whatsappNumber || data.phone;
+      if (rawPhone) {
+        const normalizedPhone = whatsappService.normalizePhoneNumber(rawPhone) || rawPhone.trim();
+        if (normalizedPhone && userRecord.phone !== normalizedPhone) {
+          userRecord.phone = normalizedPhone;
+          userRecord.whatsappNumber = normalizedPhone;
+          modified = true;
+        }
+      }
+      if (data.role && ['volunteer', 'member', 'organizer', 'trainer'].includes(data.role.toLowerCase())) {
+        userRecord.role = data.role.toLowerCase();
+        modified = true;
+      }
+      if (modified) {
+        await userRecord.save();
+      }
+    } else {
+      // Safeguard: Check if email already belongs to a different club workspace
+      const existingInOtherClub = await User.findOne({ email: normalizedEmail });
+      if (existingInOtherClub && existingInOtherClub.club && existingInOtherClub.club.toString() !== clubId.toString()) {
+        throw new AppError('A user with this email belongs to a different club workspace.', 409);
+      }
+
+      // Create new user in this club (secure internal temporary password, never exposed)
+      const rawPhone = data.whatsappNumber || data.phone || '';
+      const normalizedPhone = rawPhone ? (whatsappService.normalizePhoneNumber(rawPhone) || rawPhone.trim()) : '';
+      const secureTempPassword = crypto.randomBytes(24).toString('hex') + 'A1!';
+
+      userRecord = new User({
+        name: (data.name || 'Club Volunteer').trim(),
+        email: normalizedEmail,
+        password: secureTempPassword,
+        phone: normalizedPhone,
+        whatsappNumber: normalizedPhone,
+        role: data.role ? data.role.toLowerCase() : 'volunteer',
+        club: clubId,
+        isActive: true
+      });
+      await userRecord.save();
+      targetUserId = userRecord._id;
+    }
+  } else {
+    throw new AppError('Email address or user reference is required to register a volunteer', 400);
   }
 
   // Check if volunteer profile already exists for this user in this club
-  const existing = await Volunteer.findOne({ user: targetUserId, club: clubId });
-  if (existing) {
-    throw new AppError('Volunteer profile already exists for this user', 409);
+  const existingVolunteer = await Volunteer.findOne({ user: targetUserId, club: clubId });
+  if (existingVolunteer) {
+    throw new AppError('Volunteer already exists for this club.', 409);
   }
 
   let eventId = null;
@@ -44,7 +115,7 @@ const createVolunteer = async (clubId, currentUser, data) => {
   });
 
   await volunteer.save();
-  return volunteer.populate('user', 'name email avatarUrl phone role');
+  return volunteer.populate('user', 'name email avatarUrl phone whatsappNumber role');
 };
 
 /**
@@ -73,7 +144,7 @@ const getVolunteers = async (clubId, query = {}) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('user', 'name email avatarUrl phone role')
+      .populate('user', 'name email avatarUrl phone whatsappNumber role')
       .populate('event', 'title status startDate endDate'),
     Volunteer.countDocuments(filter)
   ]);
@@ -125,7 +196,7 @@ const getVolunteerById = async (clubId, volunteerId) => {
   validateObjectId(volunteerId, 'volunteer ID');
 
   const volunteer = await Volunteer.findOne({ _id: volunteerId, club: clubId })
-    .populate('user', 'name email avatarUrl phone role')
+    .populate('user', 'name email avatarUrl phone whatsappNumber role')
     .populate('event', 'title status startDate endDate');
 
   if (!volunteer) {
@@ -147,7 +218,7 @@ const getVolunteerById = async (clubId, volunteerId) => {
 };
 
 /**
- * Updates a volunteer profile.
+ * Updates a volunteer profile and updates the source-of-truth User document for contact info.
  */
 const updateVolunteer = async (clubId, currentUser, volunteerId, data) => {
   validateObjectId(volunteerId, 'volunteer ID');
@@ -164,6 +235,49 @@ const updateVolunteer = async (clubId, currentUser, volunteerId, data) => {
     throw new AppError('You do not have permission to modify this volunteer profile', 403);
   }
 
+  // 1. Update associated User record if user-level fields are supplied
+  if (volunteer.user) {
+    const userRecord = await User.findOne({ _id: volunteer.user, club: clubId });
+    if (userRecord) {
+      let userModified = false;
+
+      if (data.name !== undefined && data.name.trim() && userRecord.name !== data.name.trim()) {
+        userRecord.name = data.name.trim();
+        userModified = true;
+      }
+
+      if (data.email !== undefined && data.email.trim()) {
+        const newEmail = data.email.toLowerCase().trim();
+        if (newEmail !== userRecord.email) {
+          const emailConflict = await User.findOne({ email: newEmail, _id: { $ne: userRecord._id } });
+          if (emailConflict) {
+            throw new AppError('Email address is already in use by another user', 409);
+          }
+          userRecord.email = newEmail;
+          userModified = true;
+        }
+      }
+
+      if (data.phone !== undefined || data.whatsappNumber !== undefined) {
+        const rawPhone = data.whatsappNumber !== undefined && data.whatsappNumber !== '' ? data.whatsappNumber : data.phone;
+        const normalized = rawPhone ? (whatsappService.normalizePhoneNumber(rawPhone) || rawPhone.trim()) : '';
+        userRecord.phone = normalized;
+        userRecord.whatsappNumber = normalized;
+        userModified = true;
+      }
+
+      if (isOrganizer && data.role !== undefined && ['volunteer', 'member', 'organizer', 'trainer'].includes(data.role.toLowerCase())) {
+        userRecord.role = data.role.toLowerCase();
+        userModified = true;
+      }
+
+      if (userModified) {
+        await userRecord.save();
+      }
+    }
+  }
+
+  // 2. Update Volunteer record fields
   if (data.event !== undefined) {
     if (data.event) {
       validateObjectId(data.event, 'event ID');
@@ -198,7 +312,7 @@ const updateVolunteer = async (clubId, currentUser, volunteerId, data) => {
   }
 
   await volunteer.save();
-  return volunteer.populate('user', 'name email avatarUrl phone role');
+  return volunteer.populate('user', 'name email avatarUrl phone whatsappNumber role');
 };
 
 /**

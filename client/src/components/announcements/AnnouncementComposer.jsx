@@ -39,6 +39,7 @@ export default function AnnouncementComposer({
   const [previewData, setPreviewData] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState(null);
+  const [showWhatsAppRecipients, setShowWhatsAppRecipients] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -473,6 +474,71 @@ export default function AnnouncementComposer({
                 </tbody>
               </table>
             </div>
+
+            {/* WhatsApp Recipient Intelligence Section */}
+            {formData.channels.includes('whatsapp') && previewData?.whatsapp && (
+              <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                      WhatsApp Recipients ({previewData.whatsapp.totalRecipients || 0} found)
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowWhatsAppRecipients(!showWhatsAppRecipients)}
+                    className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-medium transition-colors"
+                  >
+                    {showWhatsAppRecipients ? 'Hide recipients' : 'View recipients'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <span className="text-emerald-400 font-medium flex items-center gap-1">
+                    ✓ {previewData.whatsapp.validRecipients || 0} have WhatsApp numbers
+                  </span>
+                  {(previewData.whatsapp.missingContact || 0) > 0 && (
+                    <span className="text-amber-400 font-medium flex items-center gap-1">
+                      ⚠ {previewData.whatsapp.missingContact} missing WhatsApp numbers
+                    </span>
+                  )}
+                </div>
+
+                {showWhatsAppRecipients && (
+                  <div className="mt-3 pt-3 border-t border-[#263247]/60 space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {previewData.whatsapp.recipients?.map((r, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-[#151D2E] border border-[#263247]/40"
+                      >
+                        <div className="flex items-center gap-2">
+                          {r.status === 'ready' ? (
+                            <span className="text-emerald-400 font-bold">✓</span>
+                          ) : (
+                            <span className="text-amber-400 font-bold">⚠</span>
+                          )}
+                          <span className="text-white font-medium">{r.name}</span>
+                          <span className="text-gray-400 font-mono">
+                            {r.phone ? `— ${r.phone}` : '— WhatsApp number not added'}
+                          </span>
+                        </div>
+                        {r.status === 'missing_contact' && (
+                          <a
+                            href="/volunteers"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-[#818CF8] hover:underline"
+                          >
+                            + Add WhatsApp number
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

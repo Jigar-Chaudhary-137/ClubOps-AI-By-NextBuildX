@@ -133,7 +133,7 @@ export default function VolunteersPage() {
         ? v.user.role.charAt(0).toUpperCase() + v.user.role.slice(1)
         : (v.department || 'Volunteer'),
       email: v.user?.email || v.email || '',
-      phone: v.user?.phone || v.phone || '',
+      phone: v.user?.whatsappNumber || v.user?.phone || v.phone || '',
       availability: v.availability || 'available',
       skills: Array.isArray(v.skills) ? v.skills : [],
       department: v.department || 'General',

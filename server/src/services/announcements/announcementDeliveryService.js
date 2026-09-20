@@ -21,6 +21,7 @@ const { AppError } = require('../../utils/errors');
 const { validateObjectId } = require('../../utils/pagination');
 const { sendToClub } = require('../../utils/realtime');
 
+const whatsappService = require('../whatsapp.service');
 const emailDeliveryService = require('./emailDeliveryService');
 const smsDeliveryService = require('./smsDeliveryService');
 const whatsappDeliveryService = require('./whatsappDeliveryService');
@@ -95,6 +96,7 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
             name: u.name || 'Member',
             email: u.email || '',
             phone: u.phone || '',
+            whatsappNumber: u.whatsappNumber || '',
             role: u.role || 'member',
             avatarUrl: u.avatarUrl || '',
             deviceTokens: Array.isArray(u.deviceTokens) ? u.deviceTokens : [],
@@ -114,7 +116,7 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
   // 1. Entire Club
   if (normalizedAudiences.has('entire_club')) {
     const clubMembers = await User.find({ club: clubId, isActive: true })
-      .select('_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .select('_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     addUsersToMap(clubMembers);
   }
@@ -123,13 +125,13 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
   if (normalizedAudiences.has('event_participants') && eventId) {
     validateObjectId(eventId, 'event ID');
     const eventVolunteers = await Volunteer.find({ club: clubId, event: eventId })
-      .populate('user', '_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .populate('user', '_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     const volunteerUsers = eventVolunteers.map(v => v.user).filter(Boolean);
     addUsersToMap(volunteerUsers);
 
     const eventTasks = await Task.find({ club: clubId, event: eventId, assignedTo: { $ne: null } })
-      .populate('assignedTo', '_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .populate('assignedTo', '_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     const taskUsers = eventTasks.map(t => t.assignedTo).filter(Boolean);
     addUsersToMap(taskUsers);
@@ -142,13 +144,13 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
       volQuery.event = eventId;
     }
     const volunteers = await Volunteer.find(volQuery)
-      .populate('user', '_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .populate('user', '_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     const volunteerUsers = volunteers.map(v => v.user).filter(Boolean);
     addUsersToMap(volunteerUsers);
 
     const roleVolunteers = await User.find({ club: clubId, role: 'volunteer', isActive: true })
-      .select('_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .select('_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     addUsersToMap(roleVolunteers);
   }
@@ -160,7 +162,7 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
       role: { $in: ['admin', 'organizer'] },
       isActive: true
     })
-      .select('_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .select('_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     addUsersToMap(organizers);
   }
@@ -172,7 +174,7 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
       $or: [{ role: 'trainer' }, { department: /trainer|mentor/i }],
       isActive: true
     })
-      .select('_id name email phone role avatarUrl deviceTokens notificationPreferences')
+      .select('_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
       .lean();
     addUsersToMap(trainers);
   }
@@ -186,7 +188,7 @@ const resolveAudienceRecipients = async (clubId, options = {}) => {
         club: clubId,
         isActive: true
       })
-        .select('_id name email phone role avatarUrl deviceTokens notificationPreferences')
+        .select('_id name email phone whatsappNumber role avatarUrl deviceTokens notificationPreferences')
         .lean();
       addUsersToMap(customMembers);
     }
@@ -203,30 +205,55 @@ const getAudiencePreview = async (clubId, options = {}) => {
   const health = await getProviderStatus();
 
   let emailAvailableCount = 0;
-  let phoneAvailableCount = 0;
   let pushAvailableCount = 0;
+  let whatsappValidCount = 0;
   const inAppAvailableCount = recipients.length;
+
+  const whatsappRecipients = [];
 
   for (const r of recipients) {
     if (r.email && /^\S+@\S+\.\S+$/.test(r.email.trim())) {
       emailAvailableCount++;
     }
-    if (r.phone && r.phone.trim().length >= 7) {
-      phoneAvailableCount++;
-    }
     if (Array.isArray(r.deviceTokens) && r.deviceTokens.length > 0) {
       pushAvailableCount++;
+    }
+
+    const rawWa = r.whatsappNumber || r.phone;
+    const normalizedWa = rawWa ? whatsappService.normalizePhoneNumber(rawWa) : null;
+    if (normalizedWa) {
+      whatsappValidCount++;
+      whatsappRecipients.push({
+        userId: r._id,
+        name: r.name || 'Member',
+        phone: normalizedWa,
+        status: 'ready'
+      });
+    } else {
+      whatsappRecipients.push({
+        userId: r._id,
+        name: r.name || 'Member',
+        phone: null,
+        status: 'missing_contact'
+      });
     }
   }
 
   const noEmailCount = recipients.length - emailAvailableCount;
-  const noPhoneCount = recipients.length - phoneAvailableCount;
+  const noPhoneCount = recipients.length - whatsappValidCount;
   const noPushCount = recipients.length - pushAvailableCount;
 
   return {
     audiences: options.audiences || [options.targetAudience || 'Entire Club'],
     uniqueRecipients: recipients.length,
     deliveryMode: health.deliveryMode,
+    whatsapp: {
+      channel: 'whatsapp',
+      totalRecipients: recipients.length,
+      validRecipients: whatsappValidCount,
+      missingContact: noPhoneCount,
+      recipients: whatsappRecipients
+    },
     channelAvailability: {
       in_app: {
         total: recipients.length,
@@ -246,21 +273,21 @@ const getAudiencePreview = async (clubId, options = {}) => {
       },
       whatsapp: {
         total: recipients.length,
-        available: phoneAvailableCount,
+        available: whatsappValidCount,
         missing: noPhoneCount,
         status: health.providers.whatsapp.status,
         providerNotice: health.providers.whatsapp.connected
-          ? `Twilio WhatsApp ready (${health.providers.whatsapp.fromNumber})`
-          : 'Twilio WhatsApp not configured in environment'
+          ? `WhatsApp provider ready`
+          : 'WhatsApp provider not configured in environment'
       },
       sms: {
         total: recipients.length,
-        available: phoneAvailableCount,
+        available: whatsappValidCount,
         missing: noPhoneCount,
         status: health.providers.sms.status,
         providerNotice: health.providers.sms.connected
-          ? `Twilio SMS ready (${health.providers.sms.fromNumber})`
-          : 'Twilio SMS not configured in environment'
+          ? `SMS provider ready`
+          : 'SMS provider not configured in environment'
       },
       push: {
         total: recipients.length,

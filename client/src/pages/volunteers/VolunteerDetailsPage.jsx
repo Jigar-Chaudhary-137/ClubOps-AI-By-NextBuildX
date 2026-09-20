@@ -77,6 +77,11 @@ export default function VolunteerDetailsPage() {
   const handleUpdate = async (payload) => {
     try {
       await updateVolunteer(volunteerId, {
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        whatsappNumber: payload.whatsappNumber,
+        role: payload.role,
         availability: payload.availability,
         department: payload.department,
         skills: payload.skills,
@@ -86,7 +91,7 @@ export default function VolunteerDetailsPage() {
       setToast({
         type: 'success',
         title: 'Volunteer Updated',
-        message: 'Volunteer profile updated successfully.'
+        message: 'Volunteer profile updated successfully in MongoDB.'
       });
     } catch (err) {
       throw err;
@@ -282,11 +287,22 @@ export default function VolunteerDetailsPage() {
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#111827] border border-[#263247]">
-                  <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
-                    <Phone className="w-3.5 h-3.5 text-[#F59E0B]" />
-                    <span>Phone Number</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+                      <Phone className="w-3.5 h-3.5 text-[#22C55E]" />
+                      <span>WhatsApp / Phone</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="text-[11px] text-[#818CF8] hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Edit className="w-3 h-3" /> Edit
+                    </button>
                   </div>
-                  <p className="text-sm font-semibold text-white mt-1">{phone || '—'}</p>
+                  <p className="text-sm font-semibold text-white mt-1">
+                    {phone ? `WhatsApp: ${phone}` : <span className="text-amber-400/90 font-medium">WhatsApp: Not added</span>}
+                  </p>
                 </div>
 
                 <div className="col-span-1 sm:col-span-2 p-3 rounded-lg bg-[#111827] border border-[#263247]">
@@ -447,6 +463,7 @@ export default function VolunteerDetailsPage() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleUpdate}
+        initialData={volunteer}
       />
     </div>
   );
