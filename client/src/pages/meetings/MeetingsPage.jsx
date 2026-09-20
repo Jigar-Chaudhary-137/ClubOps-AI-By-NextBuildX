@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Sparkles, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Sparkles, LayoutGrid, List, SlidersHorizontal, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -9,6 +9,9 @@ import {
   MeetingList,
   CreateMeetingModal
 } from '../../components/meetings';
+import { getMeetings, createMeeting } from '../../services/api/meetings';
+import { getEvents } from '../../services/api/events';
+import { normalizeApiError } from '../../services/api/client';
 
 const meetingTypeFilterOptions = [
   { value: 'all', label: 'All Types' },
@@ -18,10 +21,6 @@ const meetingTypeFilterOptions = [
   { value: 'Committee', label: 'Committee' },
   { value: 'Emergency', label: 'Emergency' },
   { value: 'Other', label: 'Other' }
-];
-
-const eventFilterOptions = [
-  { value: 'all', label: 'All Events' }
 ];
 
 const processingStatusOptions = [
@@ -42,6 +41,12 @@ export default function MeetingsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
+  // Data state
+  const [meetings, setMeetings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [events, setEvents] = useState([]);
+
   // Toolbar filters state
   const [searchQuery, setSearchQuery] = useState('');
   const [eventFilter, setEventFilter] = useState('all');
@@ -49,11 +54,83 @@ export default function MeetingsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('updated');
 
-  // Since backend is not connected yet, meeting list starts empty
-  const meetings = [];
+  // Fetch events for filter dropdown
+  useEffect(() => {
+    let isMounted = true;
+    const loadEvents = async () => {
+      try {
+        const res = await getEvents();
+        if (isMounted && res?.data) {
+          const list = Array.isArray(res.data) ? res.data : (res.data.events || []);
+          setEvents(list);
+        }
+      } catch (e) {
+        console.warn('Failed to load events for filter:', e.message);
+      }
+    };
+    loadEvents();
+    return () => { isMounted = false; };
+  }, []);
+
+  const eventFilterOptions = [
+    { value: 'all', label: 'All Events' },
+    ...events.map(e => ({ value: e._id || e.id, label: e.title || e.name || 'Untitled Event' }))
+  ];
+
+  // Fetch real meetings from backend
+  const fetchMeetings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (eventFilter !== 'all') params.event = eventFilter;
+
+      const res = await getMeetings(params);
+      const meetingList = Array.isArray(res?.data)
+        ? res.data
+        : (res?.data?.meetings || res?.meetings || []);
+
+      // Client-side filtering for type & status if applicable
+      let filtered = meetingList;
+      if (typeFilter !== 'all') {
+        filtered = filtered.filter(m => (m.type || 'Planning').toLowerCase() === typeFilter.toLowerCase());
+      }
+      if (statusFilter === 'Processed') {
+        filtered = filtered.filter(m => m.aiProcessed || m.actionItemsExtracted);
+      } else if (statusFilter === 'Not Processed') {
+        filtered = filtered.filter(m => !m.aiProcessed && !m.actionItemsExtracted);
+      }
+
+      // Sort
+      if (sortBy === 'date') {
+        filtered.sort((a, b) => new Date(b.scheduledAt || b.createdAt) - new Date(a.scheduledAt || a.createdAt));
+      } else if (sortBy === 'name') {
+        filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      } else {
+        filtered.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+      }
+
+      setMeetings(filtered);
+    } catch (err) {
+      console.error('Failed to fetch meetings:', err);
+      setError(normalizeApiError(err, 'Failed to load meetings. Please check your session.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, eventFilter, typeFilter, statusFilter, sortBy]);
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
+
+  const handleCreateMeetingSave = async (payload) => {
+    const res = await createMeeting(payload);
+    await fetchMeetings();
+    return res;
+  };
 
   const handleOpenIntelligence = () => {
-    // Navigate to new session meeting intelligence workspace
     navigate('/meetings/intelligence');
   };
 
@@ -168,19 +245,41 @@ export default function MeetingsPage() {
         </CardContent>
       </Card>
 
-      {/* Meeting List or Empty State */}
-      <MeetingList
-        meetings={meetings}
-        viewMode={viewMode}
-        onViewMeeting={handleViewMeeting}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
-        onProcessNotes={handleOpenIntelligence}
-      />
+      {/* Error state */}
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <Button variant="secondary" size="sm" onClick={fetchMeetings}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading ? (
+        <div className="py-16 text-center text-xs text-[#94A3B8] flex items-center justify-center gap-2 bg-[#151D2E] rounded-xl border border-[#263247]">
+          <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+          <span>Loading meetings...</span>
+        </div>
+      ) : (
+        /* Meeting List or Empty State */
+        <MeetingList
+          meetings={meetings}
+          viewMode={viewMode}
+          onViewMeeting={handleViewMeeting}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+          onProcessNotes={handleOpenIntelligence}
+        />
+      )}
 
       {/* Create Meeting Modal */}
       <CreateMeetingModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateMeetingSave}
       />
     </div>
   );

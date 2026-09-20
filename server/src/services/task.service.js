@@ -13,14 +13,14 @@ const createTask = async (clubId, userId, data) => {
     throw new AppError('Task title is required', 400);
   }
 
-  if (!data.event) {
-    throw new AppError('Associated event is required', 400);
-  }
-
-  validateObjectId(data.event, 'event ID');
-  const event = await Event.findOne({ _id: data.event, club: clubId });
-  if (!event) {
-    throw new AppError('Event not found or does not belong to your club', 404);
+  let eventId = null;
+  if (data.event && data.event !== 'none' && data.event !== '') {
+    validateObjectId(data.event, 'event ID');
+    const event = await Event.findOne({ _id: data.event, club: clubId });
+    if (!event) {
+      throw new AppError('Event not found or does not belong to your club', 404);
+    }
+    eventId = event._id;
   }
 
   let assignedUserId = null;
@@ -58,7 +58,7 @@ const createTask = async (clubId, userId, data) => {
     priority: data.priority || 'medium',
     assignedTo: assignedUserId,
     volunteer: volunteerId,
-    event: data.event,
+    event: eventId,
     club: clubId,
     dueDate: data.dueDate || null,
     createdBy: userId

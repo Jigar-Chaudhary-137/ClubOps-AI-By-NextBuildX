@@ -13,6 +13,11 @@ const meetingSchema = new mongoose.Schema(
       default: '',
       trim: true
     },
+    type: {
+      type: String,
+      default: 'Planning',
+      trim: true
+    },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',

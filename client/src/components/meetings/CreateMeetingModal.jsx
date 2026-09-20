@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Users, Sparkles, X, Plus, AlertCircle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Input from '../ui/Input';
@@ -6,6 +6,8 @@ import Textarea from '../ui/Textarea';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { createMeeting } from '../../services/api/meetings';
+import { getEvents } from '../../services/api/events';
+import { normalizeApiError } from '../../services/api/client';
 
 const meetingTypeOptions = [
   { value: 'Planning', label: 'Planning' },
@@ -14,11 +16,6 @@ const meetingTypeOptions = [
   { value: 'Committee', label: 'Committee' },
   { value: 'Emergency', label: 'Emergency' },
   { value: 'Other', label: 'Other' }
-];
-
-const eventOptions = [
-  { value: '', label: 'Select event' },
-  { value: 'none', label: 'None / Standalone' }
 ];
 
 export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
@@ -34,11 +31,46 @@ export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
     notes: ''
   });
 
+  const [eventOptions, setEventOptions] = useState([
+    { value: '', label: 'Select event (optional)' },
+    { value: 'none', label: 'None / Standalone' }
+  ]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+
   const [participants, setParticipants] = useState([]);
   const [participantInput, setParticipantInput] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState(null);
+
+  // Load real club events when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      let isMounted = true;
+      const fetchClubEvents = async () => {
+        setLoadingEvents(true);
+        try {
+          const res = await getEvents();
+          if (isMounted && res?.data) {
+            const list = Array.isArray(res.data) ? res.data : (res.data.events || []);
+            const options = [
+              { value: '', label: 'None / Standalone' },
+              ...list.map((e) => ({
+                value: e._id || e.id,
+                label: e.title || e.name || 'Untitled Event'
+              }))
+            ];
+            setEventOptions(options);
+          }
+        } catch (err) {
+          console.warn('Failed to load events for meeting modal:', err.message);
+        } finally {
+          if (isMounted) setLoadingEvents(false);
+        }
+      };
+      fetchClubEvents();
+    }
+  }, [isOpen]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -92,17 +124,29 @@ export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
 
     try {
       const payload = {
-        ...formData,
-        attendees: participants
+        title: formData.title.trim(),
+        event: formData.event && formData.event !== 'none' ? formData.event : null,
+        type: formData.type || 'Planning',
+        date: formData.date,
+        startTime: formData.startTime || '10:00',
+        endTime: formData.endTime || '',
+        location: formData.location.trim() || 'Online',
+        agenda: formData.agenda.trim(),
+        notes: formData.notes.trim(),
+        participants
       };
+
+      let result;
       if (onSave) {
-        await onSave(payload);
+        result = await onSave(payload);
       } else {
-        await createMeeting(payload);
+        result = await createMeeting(payload);
       }
       handleModalClose();
     } catch (err) {
-      setApiError(err.response?.data?.message || err.message || 'Failed to create meeting');
+      console.error('Create Meeting Error:', err);
+      const normalized = normalizeApiError(err, 'Failed to create meeting. Please check your network and session.');
+      setApiError(normalized);
     } finally {
       setIsSubmitting(false);
     }
@@ -163,9 +207,9 @@ export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{apiError}</span>
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2.5 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed font-medium">{apiError}</div>
           </div>
         )}
 
@@ -182,11 +226,11 @@ export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
         {/* Event & Meeting Type */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label="Event"
+            label="Associated Event (Optional)"
             options={eventOptions}
             value={formData.event}
             onChange={(e) => handleChange('event', e.target.value)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || loadingEvents}
           />
           <Select
             label="Meeting Type"
@@ -294,8 +338,8 @@ export default function CreateMeetingModal({ isOpen, onClose, onSave }) {
 
         {/* Notes */}
         <Textarea
-          label="Notes"
-          placeholder="Additional meeting notes..."
+          label="Notes / Discussion Outline"
+          placeholder="Key discussion points or meeting overview..."
           rows={3}
           value={formData.notes}
           onChange={(e) => handleChange('notes', e.target.value)}

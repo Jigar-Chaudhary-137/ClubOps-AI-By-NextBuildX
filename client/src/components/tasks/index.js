@@ -7,3 +7,5 @@ export { default as TaskStatusBadge } from './TaskStatusBadge';
 export { default as TaskPriorityBadge } from './TaskPriorityBadge';
 export { default as AITaskIndicator } from './AITaskIndicator';
 export { default as TaskQuickActions } from './TaskQuickActions';
+export { default as AITaskExtractionModal } from './AITaskExtractionModal';
+

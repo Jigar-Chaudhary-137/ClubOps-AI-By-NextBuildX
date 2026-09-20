@@ -10,6 +10,7 @@ export default function TaskList({
   tasks = [],
   onViewTask,
   onOpenCreateModal,
+  onOpenExtractModal,
   className = ''
 }) {
   if (!tasks || tasks.length === 0) {
@@ -30,15 +31,14 @@ export default function TaskList({
                 >
                   Create Task
                 </Button>
-                <Link to="/meetings">
-                  <Button
-                    variant="ai"
-                    size="md"
-                    leftIcon={<Sparkles className="w-4 h-4" />}
-                  >
-                    Ask AI to Extract Tasks
-                  </Button>
-                </Link>
+                <Button
+                  variant="ai"
+                  size="md"
+                  onClick={onOpenExtractModal}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                >
+                  Ask AI to Extract Tasks
+                </Button>
               </div>
             }
           />
