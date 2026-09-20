@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { Sparkles, MessageSquare, AlertCircle, ArrowRight } from 'lucide-react';
+import { Sparkles, MessageSquare, AlertCircle, ArrowRight, BookOpen, FileText, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 
 const suggestedQuestions = [
+  'What should volunteers do before their shift?',
+  'What are the common event risks?',
   'What are our event guidelines?',
-  "What is the club's registration process?",
   'What responsibilities are assigned to organizers?'
 ];
 
 export default function KnowledgeAssistant({
   onAsk,
+  isLoading = false,
+  answerData = null,
+  error = null,
   className = ''
 }) {
   const [question, setQuestion] = useState('');
@@ -20,8 +25,6 @@ export default function KnowledgeAssistant({
   const handleAsk = (queryText) => {
     const textToAsk = queryText || question;
     if (!textToAsk.trim()) return;
-    setNotice('Processing query with ClubOps AI Knowledge Assistant...');
-    setTimeout(() => setNotice(null), 4500);
     onAsk?.(textToAsk);
   };
 
@@ -59,19 +62,21 @@ export default function KnowledgeAssistant({
         >
           <div className="flex-1">
             <Input
-              placeholder="Ask a question..."
+              placeholder="Ask a question about club guidelines, policies..."
               leftIcon={<MessageSquare className="w-4 h-4 text-[#818CF8]" />}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <Button
             type="submit"
             variant="ai"
             size="md"
-            leftIcon={<Sparkles className="w-4 h-4" />}
+            isLoading={isLoading}
+            leftIcon={!isLoading ? <Sparkles className="w-4 h-4" /> : null}
           >
-            Ask AI
+            {isLoading ? 'Synthesizing...' : 'Ask AI'}
           </Button>
         </form>
 
@@ -86,6 +91,7 @@ export default function KnowledgeAssistant({
                 key={idx}
                 type="button"
                 onClick={() => handleSuggestionClick(q)}
+                disabled={isLoading}
                 className="text-xs px-3 py-1.5 rounded-lg bg-[#111827] hover:bg-[#151D2E] border border-[#263247] hover:border-[#8B5CF6]/40 text-[#94A3B8] hover:text-white transition-all text-left flex items-center gap-1.5"
               >
                 <span>{q}</span>
@@ -95,13 +101,71 @@ export default function KnowledgeAssistant({
           </div>
         </div>
 
-        {/* Integration Notification */}
-        {notice && (
-          <div className="p-3.5 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs text-[#818CF8] flex items-start gap-2.5 animate-fadeIn">
+        {/* Loading Indicator */}
+        {isLoading && (
+          <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] flex items-center gap-3 text-xs text-[#818CF8]">
+            <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+            <span>Retrieving indexed context chunks and synthesizing grounded answer...</span>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {error && (
+          <div className="p-3.5 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#F87171] flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-semibold text-white">Notice:</span> {notice}
+              <span className="font-semibold text-white">Query Error:</span> {error}
             </div>
+          </div>
+        )}
+
+        {/* Live Answer Card with Citations */}
+        {answerData && !isLoading && (
+          <div className="p-4 rounded-xl bg-[#111827] border border-[#263247] space-y-3 animate-fadeIn">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-xs font-semibold text-white">
+                <BookOpen className="w-4 h-4 text-[#818CF8]" />
+                <span>Grounded RAG Answer</span>
+              </div>
+              {answerData.citations?.length > 0 && (
+                <Badge variant="ai" size="sm">
+                  {answerData.citations.length} Source{answerData.citations.length > 1 ? 's' : ''} Cited
+                </Badge>
+              )}
+            </div>
+
+            <div className="text-xs text-white leading-relaxed whitespace-pre-wrap bg-[#151D2E]/80 p-3 rounded-lg border border-[#263247]">
+              {answerData.answer}
+            </div>
+
+            {/* Citations List */}
+            {answerData.citations && answerData.citations.length > 0 && (
+              <div className="space-y-2 pt-1 border-t border-[#263247]/60">
+                <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                  Source Citations
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {answerData.citations.map((cite, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg bg-[#151D2E] border border-[#263247] flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="w-3.5 h-3.5 text-[#818CF8] shrink-0" />
+                        <span className="text-white font-medium truncate">
+                          {cite.documentTitle || cite.documentName || 'Club Document'}
+                        </span>
+                      </div>
+                      {cite.similarity !== undefined && (
+                        <span className="text-[10px] font-mono text-[#4ADE80] bg-[#22C55E]/10 px-1.5 py-0.5 rounded ml-2 shrink-0">
+                          {(cite.similarity * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

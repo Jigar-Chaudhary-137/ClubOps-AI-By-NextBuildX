@@ -27,8 +27,8 @@ export default function DocumentPreview({
         <div className="py-12 sm:py-16 border-2 border-dashed border-[#263247] rounded-xl bg-[#111827]/40 flex flex-col items-center justify-center text-center p-6">
           <EmptyState
             icon={<Eye className="w-8 h-8 text-[#818CF8]" />}
-            title="Document preview will appear after document processing is connected."
-            description="Once ingested into the processing pipeline, text chunks and document layout will be rendered here."
+            title="Document preview not available"
+            description="Extracted text chunks and metadata are indexed in the Club Knowledge RAG system."
           />
         </div>
       </CardContent>

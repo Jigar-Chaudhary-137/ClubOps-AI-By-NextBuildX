@@ -40,8 +40,9 @@ export default function DocumentDetailsPage() {
       setError(null);
       try {
         const res = await getDocumentById(documentId);
-        if (res?.data) {
-          setDocument(res.data);
+        const docData = res?.data?.document || res?.data;
+        if (docData) {
+          setDocument(docData);
         }
       } catch (err) {
         console.error('Error fetching document details:', err);
@@ -132,13 +133,33 @@ export default function DocumentDetailsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2.5">
               <div className="flex flex-wrap items-center gap-2.5">
-                <DocumentProcessingBadge status={document.processed ? 'Processed' : 'Ready'} size="sm" />
+                <DocumentProcessingBadge
+                  status={
+                    document.ingestionStatus === 'processed'
+                      ? 'Ready'
+                      : ['processing', 'pending'].includes(document.ingestionStatus)
+                        ? 'Processing'
+                        : document.ingestionStatus === 'failed'
+                          ? 'Failed'
+                          : 'Not Processed'
+                  }
+                  size="sm"
+                />
                 <span className="text-xs text-[#64748B]">•</span>
-                <KnowledgeStatusBadge status={document.isKnowledgeBase ? 'In Knowledge Base' : 'General File'} size="sm" />
+                <KnowledgeStatusBadge
+                  status={
+                    document.isKnowledgeBase
+                      ? document.ingestionStatus === 'processed'
+                        ? 'Ready'
+                        : 'Preparing'
+                      : 'Not Added'
+                  }
+                  size="sm"
+                />
                 <span className="text-xs text-[#64748B]">•</span>
                 <span className="inline-flex items-center gap-1 text-xs text-[#94A3B8]">
                   <Tag className="w-3.5 h-3.5 text-[#818CF8]" />
-                  <span>Category: {document.category || 'General'}</span>
+                  <span>Category: {document.category ? document.category.charAt(0).toUpperCase() + document.category.slice(1) : 'General'}</span>
                 </span>
               </div>
 

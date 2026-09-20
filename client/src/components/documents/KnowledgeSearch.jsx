@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
-import { Search, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 
 export default function KnowledgeSearch({
   onSearch,
+  isLoading = false,
   className = ''
 }) {
   const [query, setQuery] = useState('');
-  const [notice, setNotice] = useState(null);
 
   const handleSearch = (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
-    setNotice('Searching club knowledge base...');
-    setTimeout(() => setNotice(null), 4500);
-    onSearch?.(query);
+    onSearch?.(query.trim());
   };
 
   return (
@@ -41,28 +39,23 @@ export default function KnowledgeSearch({
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="flex-1">
             <Input
-              placeholder="Ask something about your club..."
+              placeholder="Search documents by keywords or semantic phrases..."
               leftIcon={<Search className="w-4 h-4 text-[#818CF8]" />}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <Button
             type="submit"
             variant="ai"
             size="md"
-            leftIcon={<Sparkles className="w-4 h-4" />}
+            isLoading={isLoading}
+            leftIcon={!isLoading ? <Sparkles className="w-4 h-4" /> : null}
           >
-            Search Knowledge
+            {isLoading ? 'Searching...' : 'Search Knowledge'}
           </Button>
         </form>
-
-        {notice && (
-          <div className="p-3 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs text-[#818CF8] flex items-start gap-2.5 animate-fadeIn">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{notice}</span>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
